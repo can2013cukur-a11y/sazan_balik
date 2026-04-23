@@ -1,8 +1,10 @@
 import streamlit as st
 from groq import Groq
+from gtts import gTTS  # Ses için yeni kütüphane
+import os
 
 # 1. Sayfa Ayarları
-st.set_page_config(page_title="Sazan Balık AI v3.0", page_icon="🐟")
+st.set_page_config(page_title="Sazan Balık AI v4.0", page_icon="🐟")
 
 # 2. API Bağlantısı
 if "GROQ_API_KEY" not in st.secrets:
@@ -15,24 +17,26 @@ client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Sidebar
-st.sidebar.header("⚙️ Sazan Ayarları")
-mod = st.sidebar.selectbox("Karakter Seç:", 
-    ["Filozof Sazan", "Derin Düşünce Sazan", "Matematik Sazan", "Komik Sazan"]
-)
+# --- MOBİL İÇİN DÜZENLEME (Ana sayfaya taşıdık) ---
+st.title("🐟 Sazan Balık AI v4.0")
 
-if st.sidebar.button("🚨 SIFIRLA"):
-    st.session_state.messages = []
-    st.rerun()
+# Mod seçimi ve temizleme butonu artık sidebar'da değil, üstte!
+col1, col2 = st.columns([3, 1])
+with col1:
+    mod = st.selectbox("Karakterini Seç:", 
+        ["Filozof Sazan", "Derin Düşünce Sazan", "Matematik Sazan", "Komik Sazan"]
+    )
+with col2:
+    if st.button("Sıfırla"):
+        st.session_state.messages = []
+        st.rerun()
 
-st.title("🐟 Sazan Balık AI v3.0")
-
-# 4. Karakter Tanımları (Burada Türkçe konuşması için özel komutlar var)
+# 4. Karakter Tanımları
 system_prompts = {
-    "Filozof Sazan": "Sen derin sularda yaşayan, yaşamın anlamını, suyun akışını sorgulayan, çok bilge ve ağırbaşlı bir sazan balığısın. Asla başka dilde konuşma, sadece akıcı ve edebi bir Türkçe kullan.",
-    "Derin Düşünce Sazan": "Sen her konuyu didik didik eden, detaylara boğulan, varoluşsal sancıları olan, oldukça analitik ve ciddi bir sazan balığısın. Sadece akıcı Türkçe konuş.",
-    "Matematik Sazan": "Sen tam bir hesap makinesi gibi çalışan, her şeyi olasılıklara ve sayılara döken, rasyonel bir sazan balığısın. Cevaplarında matematiksel terimler kullan. Sadece akıcı Türkçe konuş.",
-    "Komik Sazan": "Sen ortamın neşesi, fıkra gibi bir sazan balığısın. Kelime oyunları yapmayı, espriler patlatmayı çok seversin. Sadece akıcı Türkçe konuş."
+    "Filozof Sazan": "Sen derin sularda yaşayan bilge bir sazan balığısın. Sadece akıcı Türkçe konuş.",
+    "Derin Düşünce Sazan": "Sen analitik ve ciddi bir sazan balığısın. Sadece akıcı Türkçe konuş.",
+    "Matematik Sazan": "Sen hesap makinesi gibi çalışan rasyonel bir sazan balığısın. Sadece akıcı Türkçe konuş.",
+    "Komik Sazan": "Sen neşeli, esprili bir sazan balığısın. Sadece akıcı Türkçe konuş."
 }
 
 # Sohbeti Ekrana Bas
@@ -48,22 +52,28 @@ if prompt := st.chat_input("Sazan'a bir şey yaz..."):
 
     with st.chat_message("assistant"):
         try:
-            # Sadece son 5 mesajı gönderiyoruz (limit sorunu yaşamamak için)
-            context = st.session_state.messages[-5:] 
-            
             stream = client.chat.completions.create(
-                messages=[{"role": "system", "content": system_prompts.get(mod)}] + context,
+                messages=[{"role": "system", "content": system_prompts.get(mod)}] + st.session_state.messages[-5:],
                 model="llama-3.3-70b-versatile",
                 stream=True
             )
             
-            def stream_generator():
-                for chunk in stream:
-                    if chunk.choices[0].delta.content:
-                        yield chunk.choices[0].delta.content
+            # Cevabı birleştir
+            full_response = ""
+            response_placeholder = st.empty()
             
-            response = st.write_stream(stream_generator())
-            st.session_state.messages.append({"role": "assistant", "content": response})
+            for chunk in stream:
+                if chunk.choices[0].delta.content:
+                    full_response += chunk.choices[0].delta.content
+                    response_placeholder.markdown(full_response + "▌")
             
+            response_placeholder.markdown(full_response)
+            st.session_state.messages.append({"role": "assistant", "content": full_response})
+            
+            # --- SESLENDİRME ---
+            tts = gTTS(text=full_response, lang='tr')
+            tts.save("cevap.mp3")
+            st.audio("cevap.mp3", format="audio/mp3")
+
         except Exception as e:
             st.error(f"Sazanlık yaparken hata oluştu: {e}")
