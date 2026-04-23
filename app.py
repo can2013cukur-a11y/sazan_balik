@@ -1,10 +1,10 @@
 """
 ================================================================================
-SAZAN BALIK AI - v5.5 (ULTRA PRO EDITION)
+SAZAN BALIK AI - v6.0 (ULTRA PRO EVRİM)
 Geliştirici: Can Muhammed Çukur'un dijital yansıması
 Tarih: 23 Nisan 2026
-Bu uygulama, 2026 standartlarında, güncel, zeki ve derin düşünme yeteneğine 
-sahip, profesyonel bir Streamlit yapay zeka arayüzüdür.
+Bu uygulama, 2026 standartlarında, güncel, zeki, derin düşünme yeteneğine sahip 
+ve kullanıcı dostu, özelleştirilebilir bir AI arayüzüdür.
 ================================================================================
 """
 
@@ -45,7 +45,7 @@ CONFIG_FILE = "config.json"
 def load_config():
     """Konfigürasyon dosyasını güvenli şekilde yükler."""
     default = {
-        "admin_message": "Sazan Balık v5.5 - Dijital Evrim Başladı!",
+        "admin_message": "Sazan Balık v6.0 - Dijital Evrim Başladı!",
         "global_model": "Filozof Sazan"
     }
     if os.path.exists(CONFIG_FILE):
@@ -123,32 +123,45 @@ def get_ai_response(text):
     except Exception as e:
         return f"Sistemde küçük bir akıntı sorunu oldu: {e}"
 
-# --- 6. ARAYÜZ (SIDEBAR) ---
+# --- 6. ARAYÜZ (SIDEBAR - HERKES İÇİN AÇIK) ---
 with st.sidebar:
-    st.header("⚙️ Yönetim Paneli")
+    # Balık Fotoğrafı Ekleme
+    if os.path.exists("sazan.png"):
+        st.image("sazan.png", use_container_width=True)
+    else:
+        st.warning("🐟 Sazan fotoğrafı bulunamadı (sazan.png dosyası eksik).")
+
+    st.header("⚙️ Sazan Ayarları")
+    
+    # Herkes için Model Seçimi
+    config = load_config()
+    current_model = st.selectbox("Kişilik Seç:", 
+                                 ["Filozof Sazan", "Derin Düşünce Sazan", "Matematik Sazan", "Komik Sazan"],
+                                 index=["Filozof Sazan", "Derin Düşünce Sazan", "Matematik Sazan", "Komik Sazan"].index(config.get("global_model", "Filozof Sazan")))
+    
+    # Kullanıcının seçimi güncellerse kaydet
+    if current_model != config.get("global_model"):
+        save_config({"admin_message": config.get("admin_message", ""), "global_model": current_model})
+        st.rerun()
+
     if st.button("🧹 Sohbeti Temizle"):
         st.session_state.messages = []
         st.rerun()
     
     st.divider()
+    # Admin Paneli
     st.subheader("Admin Girişi")
-    password = st.text_input("Şifre:", type="password")
+    password = st.text_input("Admin Şifresi:", type="password")
     
     if password == "dünyanın en iyi balığı":
         st.success("Yönetici Yetkisi Aktif")
-        config = load_config()
-        new_msg = st.text_input("Duyuru:", config.get("admin_message", ""))
-        new_model = st.selectbox("Mod Seçimi:", 
-                                 ["Filozof Sazan", "Derin Düşünce Sazan", "Matematik Sazan", "Komik Sazan"],
-                                 index=["Filozof Sazan", "Derin Düşünce Sazan", "Matematik Sazan", "Komik Sazan"].index(config.get("global_model", "Filozof Sazan")))
-        
-        if st.button("Sistem Güncelle"):
-            save_config({"admin_message": new_msg, "global_model": new_model})
+        new_msg = st.text_input("Duyuru Güncelle:", config.get("admin_message", ""))
+        if st.button("Duyuruyu Kaydet"):
+            save_config({"admin_message": new_msg, "global_model": current_model})
             st.rerun()
 
 # --- 7. ANA GÖVDE (MAIN) ---
-config = load_config()
-st.title(f"🐟 Sazan Balık v5.5")
+st.title(f"🐟 Sazan Balık v6.0")
 st.caption(f"Sistem Modu: {config.get('global_model')} | {datetime.now().strftime('%d %B %Y')}")
 st.info(f"📢 {config.get('admin_message')}")
 
