@@ -4,84 +4,66 @@ import json
 import random
 
 # 1. Sayfa Ayarları
-st.set_page_config(page_title="Sazan Balık AI - v2.5", page_icon="🐟", layout="wide")
+st.set_page_config(page_title="Sazan Balık AI - v2.6", page_icon="🐟", layout="wide")
 
-# 2. API Bağlantısı (Kilitli Kasa)
+# 2. API Bağlantısı
 if "GROQ_API_KEY" not in st.secrets:
     st.error("API Anahtarı bulunamadı! Lütfen Streamlit ayarlarından 'Secrets' kısmına GROQ_API_KEY ekle.")
     st.stop()
 
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
-# 3. Sazan Felsefesi (Rastgele sözler için)
-sazan_sozleri = [
-    "Akıntıya karşı yüzmeyen balık, balık değildir.",
-    "Bazen sadece suyun tadını çıkarmak gerekir, felsefe sonra gelir.",
-    "Pullarımın parlaklığı, ruhumun derinliğini yansıtmaz.",
-    "Yem her zaman bedava değildir, oltaya dikkat et!",
-    "Beni anlamak için önce suyun içindeki sessizliği duyman lazım."
-]
-
-# 4. Sohbet Geçmişi ve Sayaç
+# 3. Sohbet Geçmişi ve Sayaç
 if "messages" not in st.session_state:
     st.session_state.messages = []
 if "mesaj_sayisi" not in st.session_state:
     st.session_state.mesaj_sayisi = 0
 
-# 5. Sidebar (Ayarlar ve İstatistikler)
+# 4. Sidebar
 with st.sidebar:
-    st.header("🐟 Sazan Paneli")
+    st.header("⚙️ Sazan Paneli")
     mod = st.selectbox("Karakter Seç:", ["Filozof Sazan", "İğneleyici Sazan", "Normal Sazan"])
-    
-    st.info(f"Sazan Bilgeliği: {random.choice(sazan_sozleri)}")
     
     if st.button("Sohbeti Temizle"):
         st.session_state.messages = []
         st.session_state.mesaj_sayisi = 0
         st.rerun()
-    
-    st.markdown("---")
-    st.write(f"📊 Sohbet Derinliği: {st.session_state.mesaj_sayisi} mesaj")
-    
-    if st.session_state.messages:
-        safe_messages = []
-        for m in st.session_state.messages:
-            safe_messages.append({"role": str(m.get("role")), "content": str(m.get("content"))})
-        conv_json = json.dumps(safe_messages, ensure_ascii=False)
-        st.download_button("Konuşmayı İndir", conv_json, file_name="sazan_sohbet.json", mime="application/json")
 
-# 6. Ana Başlık
-st.title("🐟 Sazan Balık AI - v2.5")
-st.subheader(f"Şu anki modun: **{mod}**")
+# 5. Başlık
+st.title("🐟 Sazan Balık AI - v2.6")
 
-# 7. Mesaj Geçmişi
+# 6. Mesajları Ekrana Yazdır
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# 8. Sohbet Motoru
+# 7. Sohbet Motoru (Hata Düzeltici Temizleyici ile)
 if prompt := st.chat_input("Sazan Balık'a derin bir şeyler söyle..."):
-    # Sayaç artır
-    st.session_state.mesaj_sayisi += 1
-    
-    # Kullanıcı mesajını ekle
+    # Mesajı ekle
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Bot cevabı (Persona ile)
+    # Bot cevabı
     with st.chat_message("assistant"):
         system_prompts = {
-            "Filozof Sazan": "Sen derin sularda yüzen, balık felsefesi yapan, biraz unutkan ama çok bilge bir sazan balığısın. Cevaplarında hep su, akıntı, pullar ve göl kenarı metaforları kullan.",
-            "İğneleyici Sazan": "Sen çok bilmiş, laf sokmayı seven, insanların oltalarına ve yemiş olduğu yemlere sinir olan, sarkastik bir sazan balığısın.",
-            "Normal Sazan": "Sen yardımsever, sakin, gölün huzurunu temsil eden ve herkese iyi davranan bir sazan balığısın."
+            "Filozof Sazan": "Sen derin sularda yüzen, balık felsefesi yapan, biraz unutkan ama çok bilge bir sazan balığısın.",
+            "İğneleyici Sazan": "Sen çok bilmiş, laf sokmayı seven, sarkastik bir sazan balığısın.",
+            "Normal Sazan": "Sen yardımsever, sakin, gölün huzurunu temsil eden bir sazan balığısın."
         }
+        
+        # VERİ TEMİZLEME: API'ye göndermeden önce tüm geçmişi temizle
+        clean_history = []
+        for m in st.session_state.messages:
+            # Sadece içeriği olan ve boş olmayan mesajları al
+            if m.get("content"):
+                clean_history.append({"role": str(m["role"]), "content": str(m["content"])})
         
         try:
             stream = client.chat.completions.create(
                 messages=[
                     {"role": "system", "content": system_prompts.get(mod, "Sen bir sazan balığısın.")},
-                    *st.session_state.messages
+                    *clean_history # Temizlenmiş geçmişi gönderiyoruz
                 ],
                 model="llama-3.3-70b-versatile",
                 stream=True
@@ -89,4 +71,4 @@ if prompt := st.chat_input("Sazan Balık'a derin bir şeyler söyle..."):
             response = st.write_stream(stream)
             st.session_state.messages.append({"role": "assistant", "content": response})
         except Exception as e:
-            st.error(f"Sazanlık yaparken bir hata oluştu: {e}")
+            st.error(f"Sazanlık yaparken hata oluştu (Sohbeti temizle butonuna bas): {e}")
