@@ -8,139 +8,113 @@ import speech_recognition as sr
 from audio_recorder_streamlit import audio_recorder
 from datetime import datetime
 
-# --- 1. AYARLAR VE CONFIG YÖNETİMİ ---
+# --- 1. CONFIG AYARLARI ---
 CONFIG_FILE = "config.json"
 
 def load_config():
-    """Config dosyasını okur, yoksa varsayılanları döner."""
     if os.path.exists(CONFIG_FILE):
         with open(CONFIG_FILE, "r") as f:
-            try:
-                return json.load(f)
-            except:
-                return {"admin_message": "Sazan Balık v2.0 Aktif", "global_model": "Filozof Sazan"}
-    return {"admin_message": "Sazan Balık v2.0 Aktif", "global_model": "Filozof Sazan"}
+            try: return json.load(f)
+            except: return {"admin_message": "Sazan Balık v3.0", "global_model": "Filozof Sazan"}
+    return {"admin_message": "Sazan Balık v3.0", "global_model": "Filozof Sazan"}
 
 def save_config(config):
-    """Config dosyasını kaydeder."""
     with open(CONFIG_FILE, "w") as f:
         json.dump(config, f)
 
 config = load_config()
 
-# --- 2. SAYFA VE İSTEMCİ AYARLARI ---
-st.set_page_config(page_title="Sazan Balık AI 2026", page_icon="🐟")
+# --- 2. BAŞLATICI ---
+st.set_page_config(page_title="Sazan Balık 2026", page_icon="🐟")
 
 if "GROQ_API_KEY" not in st.secrets:
-    st.error("API Anahtarı bulunamadı! Lütfen Secrets kısmına ekle.")
+    st.error("Lütfen Streamlit Secrets kısmına GROQ_API_KEY ekleyin.")
     st.stop()
 
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
 # --- 3. ADMIN PANELİ ---
-with st.expander("👑 Admin Paneli (Yönetim)"):
-    password = st.text_input("Admin Şifresi:", type="password")
+with st.expander("👑 Admin Paneli"):
+    password = st.text_input("Şifre:", type="password")
     if password == "dünyanın en iyi balığı":
-        st.success("Yönetici girişi başarılı!")
-        new_msg = st.text_input("Duyuru Mesajı:", config.get("admin_message", ""))
-        new_model = st.selectbox(
-            "Model Seçimi:", 
-            ["Filozof Sazan", "Derin Düşünce Sazan", "Matematik Sazan", "Komik Sazan"],
-            index=["Filozof Sazan", "Derin Düşünce Sazan", "Matematik Sazan", "Komik Sazan"].index(config.get("global_model", "Filozof Sazan"))
-        )
-        if st.button("Ayarları Güncelle"):
+        new_msg = st.text_input("Duyuru:", config.get("admin_message", ""))
+        new_model = st.selectbox("Model:", ["Filozof Sazan", "Derin Düşünce Sazan", "Matematik Sazan", "Komik Sazan"], index=0)
+        if st.button("Kaydet"):
             config["admin_message"] = new_msg
             config["global_model"] = new_model
             save_config(config)
             st.rerun()
-    elif password:
-        st.error("😡 Sazan Balık: 'Haddini bil, yanlış şifre!'")
 
-# --- 4. GÜNCEL ZAMAN VE BİLGİLENDİRME ---
-if config.get("admin_message"):
-    st.info(f"📢 **Admin Duyurusu:** {config['admin_message']}")
-
-st.title(f"🐟 Sazan Balık ({config.get('global_model')})")
-st.caption(f"Sistem Tarihi: {datetime.now().strftime('%d %B %Y')} - Güncel ve 2026 Modunda.")
-
-# --- 5. SES İŞLEME MOTORU ---
-def ses_metne_cevir(audio_bytes):
-    try:
-        with open("temp.wav", "wb") as f:
-            f.write(audio_bytes)
-        r = sr.Recognizer()
-        with sr.AudioFile("temp.wav") as source:
-            audio_data = r.record(source)
-            return r.recognize_google(audio_data, language="tr-TR")
-    except Exception as e:
-        return f"Hata: {str(e)}"
-
-# --- 6. AI CEVAP MOTORU (2026 GÜNCEL) ---
+# --- 4. ZEKİ CEVAP MOTORU ---
 def get_ai_response(text):
+    # KUTSAL BİLGİ KONTROLÜ (Yapımcıyı tanıtma)
+    yapimci_anahtar_kelimeler = ["can muhammed çukur", "yapımcın kim", "seni kim yaptı"]
+    if any(k in text.lower() for k in yapimci_anahtar_kelimeler):
+        return "Can Muhammed Çukur benim yapımcım, o beni oluşturdu. Rizeli olup Osmaniye'de doğdu."
+
+    # Güncel tarih ve talimat
     bugun = datetime.now().strftime("%d %B %Y")
-    
     sistem_talimati = f"""
-    Bugün tarih: {bugun}. Sen 2026 yılında yaşayan, teknolojiye, bilime ve güncel olaylara hakim 
-    modern bir Sazan Balığısın. 
-    Kişiliğin: {config['global_model']}.
-    Eski bilgileri değil, 2026'nın güncel dünyasını baz alarak konuş. 
-    Asla '2023' veya öncesine dair kısıtlı bilgilerle cevap verme.
-    Cevapların kısa, öz ve zekice olsun. Sadece Türkçe konuş.
+    Bugün tarih: {bugun}. Sen 2026 yılında yaşayan, bilgili bir Sazan Balığısın.
+    Kişilik: {config['global_model']}.
+    Sadece Türkçe konuş. Bilmediğin konularda sallama, 'Bilgim dahilinde değil' de.
     """
     
-    completion = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
-        messages=[{"role": "system", "content": sistem_talimati}] + 
-                  st.session_state.get("messages", [])[-5:] + 
-                  [{"role": "user", "content": text}]
-    )
-    return completion.choices[0].message.content
+    try:
+        completion = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "system", "content": sistem_talimati}] + [{"role": "user", "content": text}]
+        )
+        return completion.choices[0].message.content
+    except Exception as e:
+        return f"Bir hata oluştu: {e}"
 
-# --- 7. SOHBET AKIŞI ---
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+# --- 5. SES İŞLEME ---
+def ses_metne_cevir(audio_bytes):
+    try:
+        with open("temp.wav", "wb") as f: f.write(audio_bytes)
+        r = sr.Recognizer()
+        with sr.AudioFile("temp.wav") as source:
+            audio = r.record(source)
+            return r.recognize_google(audio, language="tr-TR")
+    except: return None
 
-mod_input = st.radio("İletişim Modu:", ["Yazışarak", "Sesli"], horizontal=True)
+# --- 6. ARAYÜZ VE AKIŞ ---
+st.title(f"🐟 Sazan Balık ({config.get('global_model')})")
+st.caption(f"Tarih: {datetime.now().strftime('%d %B %Y')} | v3.0")
 
-# Mesajları görüntüle
+if "messages" not in st.session_state: st.session_state.messages = []
+
+mod = st.radio("İletişim:", ["Yazışarak", "Sesli"], horizontal=True)
+
+# Mesaj Geçmişi
 for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
+    with st.chat_message(msg["role"]): st.markdown(msg["content"])
 
-# --- İŞLEM (Yazı/Ses) ---
-# A) YAZI MODU
-if mod_input == "Yazışarak":
-    if prompt := st.chat_input("Sazan'a bir şey yaz..."):
+# İşlem
+if mod == "Yazışarak":
+    if prompt := st.chat_input("Sazan'a sor..."):
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"): st.markdown(prompt)
-        
         with st.chat_message("assistant"):
-            with st.spinner("Sazan düşünüyor..."):
-                resp = get_ai_response(prompt)
-                st.markdown(resp)
-                st.session_state.messages.append({"role": "assistant", "content": resp})
-
-# B) SES MODU
+            resp = get_ai_response(prompt)
+            st.markdown(resp)
+            st.session_state.messages.append({"role": "assistant", "content": resp})
 else:
     audio_bytes = audio_recorder(text="Bas ve Konuş", icon_name="microphone")
     if audio_bytes:
         with st.spinner("Sazan dinliyor..."):
             user_text = ses_metne_cevir(audio_bytes)
-            
-            if user_text and "Hata" not in user_text:
-                st.write(f"🎤 Sen: {user_text}")
+            if user_text:
                 st.session_state.messages.append({"role": "user", "content": user_text})
-                
-                with st.spinner("Sazan cevaplıyor..."):
-                    resp = get_ai_response(user_text)
-                    st.markdown(f"**Sazan:** {resp}")
-                    st.session_state.messages.append({"role": "assistant", "content": resp})
-                    
-                    # Seslendir
-                    tts = gTTS(text=resp, lang='tr')
-                    audio_fp = io.BytesIO()
-                    tts.write_to_fp(audio_fp)
-                    audio_fp.seek(0)
-                    st.audio(audio_fp, format="audio/mp3", autoplay=True)
+                resp = get_ai_response(user_text)
+                st.markdown(f"**Sazan:** {resp}")
+                st.session_state.messages.append({"role": "assistant", "content": resp})
+                # Seslendir
+                tts = gTTS(text=resp, lang='tr')
+                audio_fp = io.BytesIO()
+                tts.write_to_fp(audio_fp)
+                audio_fp.seek(0)
+                st.audio(audio_fp, format="audio/mp3", autoplay=True)
             else:
-                st.error("Seni duyamadım veya mikrofon hatası var!")
+                st.error("Seni duyamadım!")
