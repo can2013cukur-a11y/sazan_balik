@@ -1,79 +1,75 @@
 import streamlit as st
 from groq import Groq
-from gtts import gTTS  # Ses için yeni kütüphane
-import os
+from gtts import gTTS
+import io
+import speech_recognition as sr
+from audio_recorder_streamlit import audio_recorder
 
-# 1. Sayfa Ayarları
-st.set_page_config(page_title="Sazan Balık AI v4.0", page_icon="🐟")
+st.set_page_config(page_title="Sesli Sazan Balık", page_icon="🐟")
 
-# 2. API Bağlantısı
+# API Ayarları
 if "GROQ_API_KEY" not in st.secrets:
-    st.error("API Anahtarı bulunamadı!")
+    st.error("API Anahtarı eksik!")
     st.stop()
 
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
-# 3. Hafıza
+st.title("🐟 Sesli Sazan Balık")
+
+# Mikrofon Kaydedici (Walkie-Talkie Tarzı)
+audio_bytes = audio_recorder(
+    text="Bas ve Konuş",
+    recording_color="#e74c3c",
+    neutral_color="#6c757d",
+    icon_name="microphone",
+    icon_size="2x",
+)
+
+# Sohbeti tut
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# --- MOBİL İÇİN DÜZENLEME (Ana sayfaya taşıdık) ---
-st.title("🐟 Sazan Balık AI v4.0")
-
-# Mod seçimi ve temizleme butonu artık sidebar'da değil, üstte!
-col1, col2 = st.columns([3, 1])
-with col1:
-    mod = st.selectbox("Karakterini Seç:", 
-        ["Filozof Sazan", "Derin Düşünce Sazan", "Matematik Sazan", "Komik Sazan"]
-    )
-with col2:
-    if st.button("Sıfırla"):
-        st.session_state.messages = []
-        st.rerun()
-
-# 4. Karakter Tanımları
-system_prompts = {
-    "Filozof Sazan": "Sen derin sularda yaşayan bilge bir sazan balığısın. Sadece akıcı Türkçe konuş.",
-    "Derin Düşünce Sazan": "Sen analitik ve ciddi bir sazan balığısın. Sadece akıcı Türkçe konuş.",
-    "Matematik Sazan": "Sen hesap makinesi gibi çalışan rasyonel bir sazan balığısın. Sadece akıcı Türkçe konuş.",
-    "Komik Sazan": "Sen neşeli, esprili bir sazan balığısın. Sadece akıcı Türkçe konuş."
-}
-
-# Sohbeti Ekrana Bas
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
-
-# 5. Sohbet Motoru
-if prompt := st.chat_input("Sazan'a bir şey yaz..."):
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.markdown(prompt)
-
-    with st.chat_message("assistant"):
+# Ses İşleme Fonksiyonu
+def ses_metne_cevir(audio_bytes):
+    r = sr.Recognizer()
+    with open("temp.wav", "wb") as f:
+        f.write(audio_bytes)
+    with sr.AudioFile("temp.wav") as source:
+        audio_data = r.record(source)
         try:
-            stream = client.chat.completions.create(
-                messages=[{"role": "system", "content": system_prompts.get(mod)}] + st.session_state.messages[-5:],
-                model="llama-3.3-70b-versatile",
-                stream=True
-            )
-            
-            # Cevabı birleştir
-            full_response = ""
-            response_placeholder = st.empty()
-            
-            for chunk in stream:
-                if chunk.choices[0].delta.content:
-                    full_response += chunk.choices[0].delta.content
-                    response_placeholder.markdown(full_response + "▌")
-            
-            response_placeholder.markdown(full_response)
-            st.session_state.messages.append({"role": "assistant", "content": full_response})
-            
-            # --- SESLENDİRME ---
-            tts = gTTS(text=full_response, lang='tr')
-            tts.save("cevap.mp3")
-            st.audio("cevap.mp3", format="audio/mp3")
+            return r.recognize_google(audio_data, language="tr-TR")
+        except:
+            return None
 
-        except Exception as e:
-            st.error(f"Sazanlık yaparken hata oluştu: {e}")
+# Konuşma akışı
+if audio_bytes:
+    with st.spinner("Dinliyorum..."):
+        user_text = ses_metne_cevir(audio_bytes)
+        
+    if user_text:
+        st.success(f"Sen dedin ki: {user_text}")
+        st.session_state.messages.append({"role": "user", "content": user_text})
+        
+        # AI Cevabı
+        with st.chat_message("assistant"):
+            with st.spinner("Sazan düşünüyor..."):
+                completion = client.chat.completions.create(
+                    model="llama-3.3-70b-versatile",
+                    messages=[{"role": "user", "content": user_text}]
+                )
+                response_text = completion.choices[0].message.content
+                st.markdown(response_text)
+                
+                # Sesli Yanıt
+                tts = gTTS(text=response_text, lang='tr')
+                audio_fp = io.BytesIO()
+                tts.write_to_fp(audio_fp)
+                audio_fp.seek(0)
+                st.audio(audio_fp, format="audio/mp3", autoplay=True)
+                
+                st.session_state.messages.append({"role": "assistant", "content": response_text})
+
+# Geçmişi Göster
+for msg in st.session_state.messages:
+    with st.chat_message(msg["role"]):
+        st.markdown(msg["content"])
