@@ -2,74 +2,93 @@ import streamlit as st
 from groq import Groq
 from gtts import gTTS
 import io
-import speech_recognition as sr
-from audio_recorder_streamlit import audio_recorder
+import json
+import os
 
-st.set_page_config(page_title="Sesli Sazan Balık", page_icon="🐟")
+# --- 1. AYARLAR VE CONFIG OKUMA ---
+CONFIG_FILE = "config.json"
 
-# API Ayarları
-if "GROQ_API_KEY" not in st.secrets:
-    st.error("API Anahtarı eksik!")
-    st.stop()
+def load_config():
+    if os.path.exists(CONFIG_FILE):
+        with open(CONFIG_FILE, "r") as f:
+            return json.load(f)
+    return {"admin_message": "", "global_model": "Filozof Sazan"}
 
+def save_config(config):
+    with open(CONFIG_FILE, "w") as f:
+        json.dump(config, f)
+
+config = load_config()
+
+# --- 2. SAYFA VE API ---
+st.set_page_config(page_title="Sazan Balık AI", page_icon="🐟")
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
-st.title("🐟 Sesli Sazan Balık")
+# --- 3. ADMIN PANELİ ---
+with st.expander("👑 Admin Paneli"):
+    password = st.text_input("Admin Şifresi:", type="password")
+    if password == "dünyanın en iyi balığı":
+        st.success("Yönetici girişi başarılı!")
+        new_msg = st.text_input("Herkese Duyuru (Mesaj):", config.get("admin_message", ""))
+        new_model = st.selectbox("Modeli Değiştir:", 
+                                 ["Filozof Sazan", "Derin Düşünce Sazan", "Matematik Sazan", "Komik Sazan"],
+                                 index=["Filozof Sazan", "Derin Düşünce Sazan", "Matematik Sazan", "Komik Sazan"].index(config.get("global_model", "Filozof Sazan")))
+        
+        if st.button("Ayarları Kaydet"):
+            config["admin_message"] = new_msg
+            config["global_model"] = new_model
+            save_config(config)
+            st.rerun()
+    elif password:
+        st.error("😡 Sazan Balık: 'Haddini bil, yanlış şifre!'")
 
-# Mikrofon Kaydedici (Walkie-Talkie Tarzı)
-audio_bytes = audio_recorder(
-    text="Bas ve Konuş",
-    recording_color="#e74c3c",
-    neutral_color="#6c757d",
-    icon_name="microphone",
-    icon_size="2x",
-)
+# --- 4. ARAYÜZ VE DUYURU ---
+if config.get("admin_message"):
+    st.info(f"📢 **Admin Duyurusu:** {config['admin_message']}")
 
-# Sohbeti tut
+st.title(f"🐟 Sazan Balık ({config.get('global_model')})")
+
+mod_input = st.radio("İletişim Modu:", ["Yazışarak", "Sesli"], horizontal=True)
+
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Ses İşleme Fonksiyonu
-def ses_metne_cevir(audio_bytes):
-    r = sr.Recognizer()
-    with open("temp.wav", "wb") as f:
-        f.write(audio_bytes)
-    with sr.AudioFile("temp.wav") as source:
-        audio_data = r.record(source)
-        try:
-            return r.recognize_google(audio_data, language="tr-TR")
-        except:
-            return None
+# --- 5. SOHBET MOTORU ---
+def get_ai_response(text):
+    prompts = {
+        "Filozof Sazan": "Sen derin sularda yaşayan bilge bir sazan balığısın. Sadece Türkçe konuş.",
+        "Derin Düşünce Sazan": "Sen analitik, detaycı bir sazan balığısın. Sadece Türkçe konuş.",
+        "Matematik Sazan": "Sen rasyonel, matematiksel terimler kullanan bir sazan balığısın. Sadece Türkçe konuş.",
+        "Komik Sazan": "Sen çok esprili, kelime oyunları yapan bir sazan balığısın. Sadece Türkçe konuş."
+    }
+    
+    completion = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[{"role": "system", "content": prompts.get(config['global_model'])}] + st.session_state.messages[-5:] + [{"role": "user", "content": text}]
+    )
+    return completion.choices[0].message.content
 
-# Konuşma akışı
-if audio_bytes:
-    with st.spinner("Dinliyorum..."):
-        user_text = ses_metne_cevir(audio_bytes)
-        
-    if user_text:
-        st.success(f"Sen dedin ki: {user_text}")
-        st.session_state.messages.append({"role": "user", "content": user_text})
-        
-        # AI Cevabı
-        with st.chat_message("assistant"):
-            with st.spinner("Sazan düşünüyor..."):
-                completion = client.chat.completions.create(
-                    model="llama-3.3-70b-versatile",
-                    messages=[{"role": "user", "content": user_text}]
-                )
-                response_text = completion.choices[0].message.content
-                st.markdown(response_text)
-                
-                # Sesli Yanıt
-                tts = gTTS(text=response_text, lang='tr')
+# Mesajları Ekrana Yazdır
+for msg in st.session_state.messages:
+    with st.chat_message(msg["role"]):
+        st.markdown(msg["content"])
+
+# --- 6. İŞLEM (YAZI/SES) ---
+if prompt := st.chat_input("Sazan'a bir şey yaz..."):
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
+
+    with st.chat_message("assistant"):
+        with st.spinner("Sazan düşünüyor..."):
+            response = get_ai_response(prompt)
+            st.markdown(response)
+            st.session_state.messages.append({"role": "assistant", "content": response})
+            
+            # Eğer mod Sesli ise seslendir
+            if mod_input == "Sesli":
+                tts = gTTS(text=response, lang='tr')
                 audio_fp = io.BytesIO()
                 tts.write_to_fp(audio_fp)
                 audio_fp.seek(0)
                 st.audio(audio_fp, format="audio/mp3", autoplay=True)
-                
-                st.session_state.messages.append({"role": "assistant", "content": response_text})
-
-# Geçmişi Göster
-for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
