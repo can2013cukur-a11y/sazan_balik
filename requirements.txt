@@ -3,3 +3,4 @@ groq
 gtts
 audio-recorder-streamlit
 SpeechRecognition
+pandas
