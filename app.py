@@ -1,10 +1,6 @@
 """
 ================================================================================
-SAZAN BALIK AI - v6.0 (ULTRA PRO EVRİM)
-Geliştirici: Can Muhammed Çukur'un dijital yansıması
-Tarih: 23 Nisan 2026
-Bu uygulama, 2026 standartlarında, güncel, zeki, derin düşünme yeteneğine sahip 
-ve kullanıcı dostu, özelleştirilebilir bir AI arayüzüdür.
+SAZAN BALIK AI - v7.0 (ULTRA PRO ENTERPRISE EDITION)
 ================================================================================
 """
 
@@ -12,204 +8,123 @@ import streamlit as st
 import json
 import os
 import time
-import random
-import io
-import speech_recognition as sr
+from datetime import datetime
 from groq import Groq
 from gtts import gTTS
 from audio_recorder_streamlit import audio_recorder
-from datetime import datetime
+import speech_recognition as sr
+import pandas as pd # Verileri tablo olarak göstermek için
 
-# --- 1. PROJE KONFİGÜRASYON VE CSS ---
-st.set_page_config(
-    page_title="Sazan Balık 2026 Pro", 
-    page_icon="🐟", 
-    layout="centered",
-    initial_sidebar_state="expanded"
-)
+# --- 1. SİSTEM YAPILANDIRMASI & CSS ---
+st.set_page_config(page_title="Sazan Balık 2026 Pro", page_icon="🐟", layout="wide")
 
-# Profesyonel Görünüm İçin Stil
 st.markdown("""
     <style>
-    .main { background-color: #f8f9fa; }
-    .stButton>button { border-radius: 20px; background-color: #007BFF; color: white; border: none; width: 100%; transition: 0.3s; }
-    .stButton>button:hover { background-color: #0056b3; transform: scale(1.02); }
-    .stExpander { border: 2px solid #007BFF; border-radius: 10px; background: #ffffff; }
-    .chat-message { padding: 1.5rem; border-radius: 0.5rem; margin-bottom: 1rem; display: flex; }
+    .big-font { font-size: 20px !important; font-weight: bold; color: #007BFF; }
+    .stApp { background-color: #f0f2f6; }
+    .chat-bubble { padding: 15px; border-radius: 15px; margin: 10px 0; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. VERİ VE KONFİGÜRASYON YÖNETİMİ ---
-CONFIG_FILE = "config.json"
-
-def load_config():
-    """Konfigürasyon dosyasını güvenli şekilde yükler."""
-    default = {
-        "admin_message": "Sazan Balık v6.0 - Dijital Evrim Başladı!",
-        "global_model": "Filozof Sazan"
-    }
-    if os.path.exists(CONFIG_FILE):
-        try:
-            with open(CONFIG_FILE, "r") as f:
+# --- 2. YARDIMCI SINIFLAR (LOGGING, CONFIG) ---
+class SystemManager:
+    @staticmethod
+    def load_config():
+        default = {"admin_message": "Sazan Balık v7.0 Yayında!", "global_model": "Filozof Sazan"}
+        if os.path.exists("config.json"):
+            with open("config.json", "r", encoding="utf-8") as f:
                 return json.load(f)
-        except Exception:
-            return default
-    return default
+        return default
 
-def save_config(config_data):
-    """Konfigürasyonu diske yazar."""
+    @staticmethod
+    def save_config(data):
+        with open("config.json", "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=4)
+
+    @staticmethod
+    def log_chat(username, prompt, response):
+        entry = {"Zaman": datetime.now().strftime("%H:%M:%S"), "Kullanıcı": username, "Soru": prompt, "Cevap": response[:50] + "..."}
+        logs = []
+        if os.path.exists("chat_logs.json"):
+            with open("chat_logs.json", "r", encoding="utf-8") as f:
+                try: logs = json.load(f)
+                except: logs = []
+        logs.append(entry)
+        with open("chat_logs.json", "w", encoding="utf-8") as f:
+            json.dump(logs, f, indent=4, ensure_ascii=False)
+
+# --- 3. AI MOTORU ---
+def get_ai_response(prompt, model_type):
     try:
-        with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-            json.dump(config_data, f, indent=4)
-        return True
-    except Exception as e:
-        st.error(f"Sistem Hatası (Config): {e}")
-        return False
-
-# --- 3. İSTEMCİ VE GÜVENLİK ---
-if "GROQ_API_KEY" not in st.secrets:
-    st.error("⚠️ GROQ_API_KEY bulunamadı! Lütfen Streamlit ayarlarından API anahtarını ekleyin.")
-    st.stop()
-
-client = Groq(api_key=st.secrets["GROQ_API_KEY"])
-
-# --- 4. YARDIMCI FONKSİYONLAR ---
-def ses_metne_cevir(audio_bytes):
-    """Ses verisini metne dönüştürür."""
-    try:
-        with open("temp.wav", "wb") as f: f.write(audio_bytes)
-        r = sr.Recognizer()
-        with sr.AudioFile("temp.wav") as source:
-            audio = r.record(source)
-            return r.recognize_google(audio, language="tr-TR")
-    except Exception:
-        return None
-
-# --- 5. YAPAY ZEKA MANTIĞI VE PERSONALAR ---
-def get_ai_response(text):
-    """Yapay zeka yanıt motoru."""
-    config = load_config()
-    model_type = config.get("global_model", "Filozof Sazan")
-    
-    # Kutsal Bilgi Kontrolü
-    if any(k in text.lower() for k in ["can muhammed çukur", "yapımcın kim", "seni kim yaptı"]):
-        return "Can Muhammed Çukur benim yapımcım, o beni oluşturdu. Rizeli olup Osmaniye'de doğdu. Ben onun ellerinde hayat bulan, evrimleşmiş dijital bir varlığım."
-
-    # Derin Düşünme Simülasyonu
-    if model_type == "Derin Düşünce Sazan":
-        with st.spinner("🐟 Derin okyanuslarda veriler analiz ediliyor..."):
-            time.sleep(2.5)
-
-    # Persona Tanımları
-    persona_prompts = {
-        "Filozof Sazan": "Sen 2026 yılının bilge sazanısın. Hayat, evren ve teknoloji üzerine derin, felsefi ve Türkçe cevaplar ver.",
-        "Derin Düşünce Sazan": "Sen analitik düşünen, rasyonel bir varlıksın. Cevapların detaylı, mantıklı ve çok kapsamlı olsun.",
-        "Matematik Sazan": "Sen bir matematik dehasısın. Her soruyu adım adım formüllerle açıkla. Asla sadece cevabı verme.",
-        "Komik Sazan": "Sen dünyanın en iğneleyici sazanısın. Bolca su altı şakası yap, kelime oyunları kullan ve kendini ciddiye alma."
-    }
-
-    # Prompt Oluşturma
-    system_prompt = f"{persona_prompts.get(model_type, 'Sazan balığısın.')} Tarih: {datetime.now().strftime('%d %B %Y')}."
-    
-    try:
+        client = Groq(api_key=st.secrets["GROQ_API_KEY"])
+        system_prompt = f"Sen {model_type} karakterisin. 2026 yılındayız."
         response = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": text}
-            ]
+            messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": prompt}]
         )
         return response.choices[0].message.content
     except Exception as e:
-        return f"Sistemde küçük bir akıntı sorunu oldu: {e}"
+        return f"Sazan şu an nefes alamıyor: {e}"
 
-# --- 6. ARAYÜZ (SIDEBAR - HERKES İÇİN AÇIK) ---
+# --- 4. KULLANICI GİRİŞİ ---
+if "username" not in st.session_state:
+    st.markdown("<center><h1>🐟 Sazan Balık Giriş Kapısı</h1></center>", unsafe_allow_html=True)
+    st.session_state.username = st.text_input("Sohbete başlamak için adını gir (Kral):")
+    if st.session_state.username: st.rerun()
+    st.stop()
+
+# --- 5. SIDEBAR (YÖNETİM VE AYARLAR) ---
 with st.sidebar:
-    # Balık Fotoğrafı Ekleme
-    if os.path.exists("sazan.png"):
-        st.image("sazan.png", use_container_width=True)
-    else:
-        st.warning("🐟 Sazan fotoğrafı bulunamadı (sazan.png dosyası eksik).")
-
-    st.header("⚙️ Sazan Ayarları")
+    if os.path.exists("sazan.png"): st.image("sazan.png")
+    st.write(f"Hoşgeldin, **{st.session_state.username}**")
     
-    # Herkes için Model Seçimi
-    config = load_config()
-    current_model = st.selectbox("Kişilik Seç:", 
-                                 ["Filozof Sazan", "Derin Düşünce Sazan", "Matematik Sazan", "Komik Sazan"],
-                                 index=["Filozof Sazan", "Derin Düşünce Sazan", "Matematik Sazan", "Komik Sazan"].index(config.get("global_model", "Filozof Sazan")))
-    
-    # Kullanıcının seçimi güncellerse kaydet
-    if current_model != config.get("global_model"):
-        save_config({"admin_message": config.get("admin_message", ""), "global_model": current_model})
-        st.rerun()
-
-    if st.button("🧹 Sohbeti Temizle"):
-        st.session_state.messages = []
-        st.rerun()
+    # Model Ayarı (Herkes için)
+    config = SystemManager.load_config()
+    model = st.selectbox("Modeli Seç:", ["Filozof Sazan", "Komik Sazan", "Matematik Sazan"], index=0)
     
     st.divider()
-    # Admin Paneli
-    st.subheader("Admin Girişi")
-    password = st.text_input("Admin Şifresi:", type="password")
     
-    if password == "dünyanın en iyi balığı":
-        st.success("Yönetici Yetkisi Aktif")
-        new_msg = st.text_input("Duyuru Güncelle:", config.get("admin_message", ""))
-        if st.button("Duyuruyu Kaydet"):
-            save_config({"admin_message": new_msg, "global_model": current_model})
-            st.rerun()
+    # Admin Paneli
+    st.subheader("🛠️ Admin Paneli")
+    if st.text_input("Admin Şifresi:", type="password") == "dünyanın en iyi balığı":
+        new_msg = st.text_input("Duyuru Güncelle:", config.get("admin_message"))
+        if st.button("Güncelle"):
+            SystemManager.save_config({"admin_message": new_msg, "global_model": model})
+            st.success("Sistem güncellendi!")
+    
+    # Süper Admin (Sadece sen)
+    st.subheader("👑 Süper Admin")
+    if st.text_input("Süper Şifre:", type="password") == "kendi_özel_sifren": # BURAYI KENDİ ŞİFREN YAP
+        st.warning("Veri Merkezi Erişimine Girdin.")
+        if os.path.exists("chat_logs.json"):
+            with open("chat_logs.json", "r", encoding="utf-8") as f:
+                logs = json.load(f)
+                df = pd.DataFrame(logs)
+                st.dataframe(df.tail(15)) # Son 15 kayıt
 
-# --- 7. ANA GÖVDE (MAIN) ---
-st.title(f"🐟 Sazan Balık v6.0")
-st.caption(f"Sistem Modu: {config.get('global_model')} | {datetime.now().strftime('%d %B %Y')}")
-st.info(f"📢 {config.get('admin_message')}")
+# --- 6. ANA EKRAN VE SOHBET ---
+st.title("🐟 Sazan Balık v7.0")
+st.info(config.get("admin_message"))
 
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+if "messages" not in st.session_state: st.session_state.messages = []
 
-# Mesajları Görüntüle
+# Mesaj geçmişi göster
 for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
+    with st.chat_message(msg["role"]): st.markdown(msg["content"])
 
-# İletişim Yöntemi
-mod_secimi = st.radio("İletişim Yöntemi:", ["Yazışarak", "Sesli"], horizontal=True)
-
-# İşlem Bloğu
-if mod_secimi == "Yazışarak":
-    if prompt := st.chat_input("Bir şeyler yaz..."):
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        with st.chat_message("user"): st.markdown(prompt)
+# Kullanıcı girişi
+if prompt := st.chat_input("Sazan'a bir şey sor..."):
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"): st.markdown(prompt)
+    
+    with st.spinner("🐟 Sazan düşünüyor..."):
+        response = get_ai_response(prompt, model)
+        SystemManager.log_chat(st.session_state.username, prompt, response)
         
         with st.chat_message("assistant"):
-            cevap = get_ai_response(prompt)
-            st.markdown(cevap)
-            st.session_state.messages.append({"role": "assistant", "content": cevap})
+            st.markdown(response)
+            st.session_state.messages.append({"role": "assistant", "content": response})
 
-elif mod_secimi == "Sesli":
-    audio_bytes = audio_recorder(text="Bas ve Konuş", icon_name="microphone")
-    if audio_bytes:
-        with st.spinner("Sazan dinliyor..."):
-            user_text = ses_metne_cevir(audio_bytes)
-            if user_text:
-                st.session_state.messages.append({"role": "user", "content": user_text})
-                with st.chat_message("user"): st.markdown(user_text)
-                
-                cevap = get_ai_response(user_text)
-                with st.chat_message("assistant"):
-                    st.markdown(cevap)
-                    st.session_state.messages.append({"role": "assistant", "content": cevap})
-                    
-                    # Seslendirme Motoru
-                    tts = gTTS(text=cevap, lang='tr')
-                    audio_fp = io.BytesIO()
-                    tts.write_to_fp(audio_fp)
-                    audio_fp.seek(0)
-                    st.audio(audio_fp, format="audio/mp3", autoplay=True)
-            else:
-                st.error("Seni duyamadım kral, tekrar denesene!")
-
-# Footer Bilgi Bölümü
+# --- 7. FOOTER ---
 st.divider()
-st.markdown("<center>© 2026 - Can Muhammed Çukur üretimi | Dijital Evrim Projesi</center>", unsafe_allow_html=True)
+st.caption("2026 - Can Muhammed Çukur üretimi | Dijital Evrim Projesi")
