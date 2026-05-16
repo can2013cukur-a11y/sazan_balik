@@ -22,6 +22,8 @@ from groq import Groq
 from gtts import gTTS
 from audio_recorder_streamlit import audio_recorder
 from datetime import datetime
+# Cihaz algılama için Streamlit header kütüphanesi
+from streamlit.web.server.websocket_headers import _get_websocket_headers
 
 # =====================================================================
 # 1. CORE SYSTEM CONFIGURATION & GLOBAL NEON CSS
@@ -98,7 +100,7 @@ DIL_MATRISI = {
     "Svenska 🇸🇪": "sv", "Norsk 🇳🇴": "no", "Dansk 🇩🇰": "da",
     "Polski 🇵🇱": "pl", "Українська 🇺🇦": "uk", "Tiếng Việt 🇻🇳": "vi",
     "ภาษาไทย 🇹🇭": "th", "Bahasa Indonesia 🇮🇩": "id", "فarsı 🇮🇷": "fa",
-    "עברית 🇮🇱": "he"
+    "עibriת 🇮🇱": "he"
 }
 
 class KurumsalVeriAmbarı:
@@ -118,16 +120,29 @@ class KurumsalVeriAmbarı:
             json.dump(data, f, indent=4, ensure_ascii=False)
 
 # =====================================================================
+# Helper: Cihaz İmzasını Al
+# =====================================================================
+def get_device_fingerprint():
+    """Giriş yapılan cihazın benzersiz tarayıcı imzasını döner."""
+    headers = _get_websocket_headers()
+    if headers:
+        return headers.get("User-Agent", "unknown_device")
+    return "unknown_device"
+
+# =====================================================================
 # 3. ADVANCED FINANCIAL SYSTEMS (SAZANBANK & BORSAM SUB-SYSTEM)
 # =====================================================================
 class SazanBank:
     @staticmethod
     def get_account(u):
         db = KurumsalVeriAmbarı.load_json(ECONOMY_FILE, {})
+        current_device = get_device_fingerprint()
+        
         if u not in db:
             db[u] = {
                 "coin": 500, "bank_deposit": 0, "level": 1, "exp": 0, 
-                "last_claim": time.time(), "achievements": [], "vip": False
+                "last_claim": time.time(), "achievements": [], "vip": False,
+                "device_owner": current_device  # Hesabı oluşturan cihazı kilitle
             }
             KurumsalVeriAmbarı.save_json(ECONOMY_FILE, db)
         return db[u]
@@ -256,7 +271,7 @@ class SazanAIConception:
         return "\n\n---\n\n".join(log)
 
 # =====================================================================
-# 6. SYSTEM INITIALIZATION & SECURE STATE CHECK (BUG FIXED 🛡️)
+# 6. SYSTEM INITIALIZATION & SECURE STATE CHECK
 # =====================================================================
 def global_state_enforcer():
     defaults = {
@@ -271,17 +286,27 @@ def global_state_enforcer():
 
 global_state_enforcer()
 
-# KRİTİK GÜVENLİK GÜNCELLEMESİ: Kullanıcı oturumu benzersiz olarak st.session_state içinde izole edildi.
+# ÜST DÜZEY GÜVENLİK DUVARI: Giriş ekranı ve Cihaz Doğrulama Havuzu
 if "username" not in st.session_state:
     st.markdown("<h1 style='text-align: center; color:#06b6d4;'>🐟 SAZAN CORE OS ENTERPRISE</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color:#9ca3af;'>Dünyanın En Gelişmiş Siber Akvaryum Ağına Hoş Geldiniz.</p>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color:#9ca3af;'>Cihaz Tabanlı Üst Seviye Güvenlik Protokolü Aktiftir.</p>", unsafe_allow_html=True)
     
-    # Her tarayıcı sekmesine özel benzersiz bir text_input anahtarı sağlandı
     identity = st.text_input("Akvaryum Yetkili Kullanıcı Adı Belirleyin:", max_chars=15, key="unique_login_gate")
     if st.button("Siber Matrise Enjekte Ol 🔥", use_container_width=True):
         if identity.strip():
-            # Kullanıcı adı doğrudan tarayıcının izole bellek alanına kilitleniyor global sızıntı önlendi!
-            st.session_state.username = identity.strip()
+            username_clean = identity.strip()
+            db_check = KurumsalVeriAmbarı.load_json(ECONOMY_FILE, {})
+            current_device_sig = get_device_fingerprint()
+            
+            # Hesap var mı ve kayıtlı cihaz bu cihazla eşleşiyor mu kontrolü
+            if username_clean in db_check:
+                registered_device = db_check[username_clean].get("device_owner")
+                if registered_device and registered_device != current_device_sig:
+                    st.error("🚨 GÜVENLİK İHLALİ: Bu hesap başka bir siber cihaza kilitlenmiş! Yetkisiz giriş engellendi.")
+                    st.stop()
+            
+            # Geçerliyse veya ilk kayıt ise oturumu aç
+            st.session_state.username = username_clean
             SazanBank.get_account(st.session_state.username)
             st.rerun()
     st.stop()
@@ -357,244 +382,4 @@ if st.session_state.admin_status:
         st.markdown("### 🪙 Altyapı Manipülasyon Araçları")
         ca1, ca2, ca3 = st.columns(3)
         with ca1:
-            if st.button("💵 Sınırsız Bakiye Enjekte Et (+50,000 SZNC)", use_container_width=True):
-                SazanBank.modify_coin(user, 50000)
-                st.success("Darphane siber açıkla tetiklendi!")
-                time.sleep(0.5)
-                st.rerun()
-        with ca2:
-            if st.button("🎁 Karaborsadaki Her Şeyi Envantere Doldur", use_container_width=True):
-                u_inv = SazanInventory.get_inventory(user)
-                u_inv["weapon"] = "Can Muhammed Antimadde Silahı"
-                u_inv["damage"] = 999
-                u_inv["potions"] += 99
-                u_inv["max_hp"] = 5000
-                u_inv["hp"] = 5000
-                SazanInventory.save_inventory(user, u_inv)
-                st.success("Karaborsa envanteri klonlandı!")
-                time.sleep(0.5)
-                st.rerun()
-        with ca3:
-            if st.button("⚡ Seviyeyi 1000 Yap (Max Elite Rank)", use_container_width=True):
-                u_acc = SazanBank.get_account(user)
-                u_acc["level"] = 1000
-                u_acc["vip"] = True
-                SazanBank.update_account(user, u_acc)
-                st.success("Maksimum elit statüsü yüklendi!")
-                time.sleep(0.5)
-                st.rerun()
-                
-        if st.button("💥 TÜM VERİ TABANINI Kökten SİL (Format Sunucu)", type="primary"):
-            KurumsalVeriAmbarı.save_json(ECONOMY_FILE, {})
-            KurumsalVeriAmbarı.save_json(INVENTORY_FILE, {})
-            KurumsalVeriAmbarı.save_json(STOCKS_FILE, {})
-            st.error("Tüm evren sıfırlandı!"); time.sleep(1); st.rerun()
-            
-    if st.button("❌ Tanrı Panelinden Çıkış Yap", use_container_width=True):
-        st.session_state.admin_status = False
-        st.rerun()
-    st.markdown("</div>", unsafe_allow_html=True)
-
-# =====================================================================
-# 9. DEEP-SEA RPG DUNGEON SYSTEM
-# =====================================================================
-if st.session_state.dungeon_status:
-    st.markdown("<div class='rpg-terminal-box'>", unsafe_allow_html=True)
-    st.write("⚔️ /// SANA ZAHMET DEEP-SEA ARENA SUB-SYSTEM ACTIVE /// ⚔️")
-    p_inv = SazanInventory.get_inventory(user)
-    
-    if not st.session_state.current_dungeon_enemy:
-        if st.button("Karanlık Su Altı Mağaralarını Keşfet 🔱", use_container_width=True):
-            st.session_state.current_dungeon_enemy = random.choice(DUNGEON_LORE["monsters"]).copy()
-            st.rerun()
-        if st.button("Zindandan Kaç"):
-            st.session_state.dungeon_status = False
-            st.rerun()
-    else:
-        en = st.session_state.current_dungeon_enemy
-        st.warning(f"💥 KARŞILAŞILAN CANAVAR: {en['name']} (Can: {en['hp']} | Güç: {en['atk']})")
-        c_rpg1, c_rpg2 = st.columns(2)
-        with c_rpg1:
-            if st.button("Silahınla Hücum Et! ⚔️", use_container_width=True):
-                p_hit = random.randint(int(p_inv["damage"]*0.8), int(p_inv["damage"]*1.2))
-                e_hit = random.randint(int(en["atk"]*0.7), int(en["atk"]*1.2))
-                en["hp"] -= p_hit
-                p_inv["hp"] -= e_hit
-                st.write(f"🎯 Düşmana {p_hit} kritik hasar verdin!")
-                st.write(f"💥 Düşmandan {e_hit} karşı hasar aldın!")
-                if p_inv["hp"] <= 0:
-                    st.error("💀 Öldün! Ağır hasardan dolayı -50 SZNC kaybettin."); SazanBank.modify_coin(user, -50)
-                    p_inv["hp"] = p_inv["max_hp"]; st.session_state.current_dungeon_enemy = None
-                elif en["hp"] <= 0:
-                    st.success(f"🏆 Canavarı Katlettin! Bakiye Ödülü: +{en['reward']} SZNC")
-                    SazanBank.modify_coin(user, en['reward'])
-                    st.session_state.current_dungeon_enemy = None
-                SazanInventory.save_inventory(user, p_inv)
-                time.sleep(1); st.rerun()
-        with c_rpg2:
-            if st.button(f"Siber İksir Tüket ({p_inv['potions']} Adet)", use_container_width=True):
-                if p_inv["potions"] > 0:
-                    p_inv["hp"] = min(p_inv["max_hp"], p_inv["hp"] + 80)
-                    p_inv["potions"] -= 1
-                    SazanInventory.save_inventory(user, p_inv)
-                    st.success("Hücrelerin yenilendi! +80 Sağlık!")
-                    time.sleep(0.5); st.rerun()
-                else:
-                    st.error("Çantanda hiç iksir kalmamış!")
-    st.markdown("</div>", unsafe_allow_html=True)
-
-for m in st.session_state.messages:
-    with st.chat_message(m["role"]):
-        st.markdown(m["content"])
-
-# =====================================================================
-# 10. SUB-PANELS (MARKET & DEFI BANK & STOCK MARKET INTERACTION)
-# =====================================================================
-if st.session_state.active_panel_tab == "plus":
-    st.markdown("<div class='stock-market-box'>", unsafe_allow_html=True)
-    t1, t2, t3, t4 = st.tabs(["🛒 Sazan Siber Market", "🏦 DeFi Sazan Bank", "📊 SZNAQ Borsa Terminali", "🔮 Gelecek Kehaneti"])
-    
-    with t1:
-        for item, d in DUNGEON_LORE["shop_items"].items():
-            st.markdown(f"🔹 **{item}** — Fiyat: `{d['cost']} SZNC` | Etki Gücü: `{d.get('damage', d.get('heal', 0))}`")
-            if st.button(f"Sistem Envanterine Al: {item}", key=f"buy_{item}"):
-                u_acc = SazanBank.get_account(user)
-                u_inv = SazanInventory.get_inventory(user)
-                if u_acc["coin"] >= d["cost"]:
-                    SazanBank.modify_coin(user, -d["cost"])
-                    if d["type"] == "weapon":
-                        u_inv["weapon"], u_inv["damage"] = item, d["damage"]
-                    elif d["type"] == "potion":
-                        u_inv["potions"] += 1
-                    SazanInventory.save_inventory(user, u_inv)
-                    st.success(f"📦 {item} başarıyla satın alındı ve kuşanıldı!"); time.sleep(0.5); st.rerun()
-                else:
-                    st.error("Hesabında yeterli coin bulunmuyor!")
-                    
-    with t2:
-        b_acc = SazanBank.get_account(user)
-        dep = st.number_input("Kasaya Aktarılacak Miktar:", min_value=0, max_value=b_acc["coin"], step=20, key="bank_deposit_input")
-        if st.button("Fonları Banka Likiditesine Kilitle"):
-            b_acc["coin"] -= dep
-            b_acc["bank_deposit"] += dep
-            b_acc["last_claim"] = time.time()
-            SazanBank.update_account(user, b_acc)
-            st.success("Mevduat faiz havuzuna aktarıldı!"); time.sleep(0.5); st.rerun()
-            
-    with t3:
-        st.write("📈 **SZNAQ CANLI BORSA ENDEKSİ (1 Dk'da bir güncellenir)**")
-        prices = st.session_state.market_prices
-        p_inv = SazanInventory.get_inventory(user)
-        if "shares" not in p_inv: p_inv["shares"] = {}
-        
-        for ticker, val in prices.items():
-            st.write(f"💹 **{ticker}**: `{val} SZNC` (Senin Portföyün: {p_inv['shares'].get(ticker, 0)} Lot)")
-            cb1, cb2 = st.columns(2)
-            with cb1:
-                if st.button(f"1 Lot Al: {ticker}", key=f"buy_share_{ticker}"):
-                    u_acc = SazanBank.get_account(user)
-                    if u_acc["coin"] >= val:
-                        SazanBank.modify_coin(user, -int(val))
-                        p_inv["shares"][ticker] = p_inv["shares"].get(ticker, 0) + 1
-                        SazanInventory.save_inventory(user, p_inv)
-                        st.success(f"{ticker} hissesi alındı!"); time.sleep(0.5); st.rerun()
-            with cb2:
-                if st.button(f"1 Lot Sat: {ticker}", key=f"sell_share_{ticker}"):
-                    if p_inv["shares"].get(ticker, 0) > 0:
-                        SazanBank.modify_coin(user, int(val))
-                        p_inv["shares"][ticker] -= 1
-                        SazanInventory.save_inventory(user, p_inv)
-                        st.success(f"{ticker} hissesi satıldı!"); time.sleep(0.5); st.rerun()
-                        
-    with t4:
-        if st.button("Kuantum Falı Çek (Maliyet: 10 Coin) 🔮", use_container_width=True):
-            f_acc = SazanBank.get_account(user)
-            if f_acc["coin"] >= 10:
-                SazanBank.modify_coin(user, -10)
-                res = groq_client.chat.completions.create(
-                    model="llama-3.3-70b-versatile",
-                    messages=[{"role":"user","content":"Su altındaki bir siborg balığın gelecekte dünyayı nasıl ele geçireceğine dair absürt siber kehanet yaz."}]
-                )
-                st.write(res.choices[0].message.content)
-    st.markdown("</div>", unsafe_allow_html=True)
-
-if st.session_state.active_panel_tab == "audio":
-    st.markdown("<div style='background: #0f172a; padding: 25px; border-radius: 16px; text-align: center;'>", unsafe_allow_html=True)
-    st.write("🎤 Konuşmaya Başlayın (Google Sinyal Algılayıcı Aktif)")
-    aud = audio_recorder(text="Sinyal Dinleniyor...", icon_name="microphone", icon_size="3x")
-    if aud:
-        try:
-            with open("live.wav", "wb") as f: f.write(aud)
-            rec = sr.Recognizer()
-            with sr.AudioFile("live.wav") as src:
-                txt = rec.recognize_google(rec.record(src), language="tr-TR")
-                if txt:
-                    st.session_state.messages.append({"role": "user", "content": f"🎤 (Sesli Giriş): {txt}"})
-                    lang = st.session_state.get('active_lang_code', 'Türkçe 🇹🇷')
-                    rep = SazanAIConception.run_council_debate(txt, lang) if st.session_state.council_activation else SazanAIConception.query_agent(txt, "Bilge Sazan", lang)
-                    st.session_state.messages.append({"role": "assistant", "content": rep})
-                    tts = gTTS(text=rep.replace("*", ""), lang=DIL_MATRISI.get(lang, "tr"))
-                    buf = io.BytesIO(); tts.write_to_fp(buf); buf.seek(0); st.audio(buf, format="audio/mp3", autoplay=True)
-                    st.session_state.active_panel_tab = None; time.sleep(1); st.rerun()
-        except Exception as e:
-            st.error(f"Mikrofon Akış Hatası: {e}")
-    st.markdown("</div>", unsafe_allow_html=True)
-
-# =====================================================================
-# 11. CENTRAL INTEGRATED CONTROL HUB (HUD SYSTEM)
-# =====================================================================
-st.markdown("<div style='height: 30px;'></div>", unsafe_allow_html=True)
-
-c_plus, c_mic, c_input, c_dg = st.columns([1, 1, 8, 1])
-
-with c_plus:
-    if st.button("➕", help="Siber Panel Ekranını Aç/Kapat", use_container_width=True, key="hud_btn_plus"):
-        st.session_state.active_panel_tab = "plus" if st.session_state.active_panel_tab != "plus" else None
-        st.rerun()
-
-with c_mic:
-    if st.button("🎤", help="Sesli Matris Girişi Yap", use_container_width=True, key="hud_btn_mic"):
-        st.session_state.active_panel_tab = "audio" if st.session_state.active_panel_tab != "audio" else None
-        st.rerun()
-
-with c_input:
-    prompt = st.chat_input("Sazan Merkez Ağına kuantum komut gönder...", key="sazan_mainframe_input")
-
-with c_dg:
-    if st.button("⚔️", help="Deep-Sea Zindan Savaş Alanını Aç", use_container_width=True, key="hud_btn_dungeon"):
-        st.session_state.dungeon_status = not st.session_state.dungeon_status
-        st.rerun()
-
-# =====================================================================
-# 12. PARSING COMMAND LOGIC & GLOBAL INTERPRETER
-# =====================================================================
-if prompt:
-    if prompt.strip() == "TURKEY SAZAN":
-        st.session_state.admin_status = True
-        st.rerun()
-    elif prompt.strip() == "/hack":
-        h_loot = random.randint(50, 150)
-        SazanBank.modify_coin(user, h_loot)
-        st.session_state.messages.append({"role": "user", "content": "⚡ `/hack` Sızma Protokolü Çalıştırıldı!"})
-        st.session_state.messages.append({"role": "assistant", "content": f"💻 Mainframe sızıldı! Havuzdan +{h_loot} SZNC cüzdana aktarıldı!"})
-        st.rerun()
-
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    SazanBank.modify_coin(user, 3)
-    
-    cur_lang = st.session_state.get('active_lang_code', 'Türkçe 🇹🇷')
-    if st.session_state.council_activation:
-        ans = SazanAIConception.run_council_debate(prompt, cur_lang)
-    else:
-        ans = SazanAIConception.query_agent(prompt, "Bilge Sazan", cur_lang)
-        
-    st.session_state.messages.append({"role": "assistant", "content": ans})
-    st.rerun()
-
-# =====================================================================
-# 13. STICKY DYNAMIC LANGUAGE SELECTION HUB
-# =====================================================================
-st.markdown("<div class='fixed-lang-hub'>", unsafe_allow_html=True)
-sel_lang = st.selectbox("🌐 Matrix Dil Çevirici:", list(DIL_MATRISI.keys()), key="lang_widget", label_visibility="collapsed")
-st.session_state.active_lang_code = sel_lang
-st.markdown("</div>", unsafe_allow_html=True)
+            if st.button("💵 Sınırsız Bakiye En
