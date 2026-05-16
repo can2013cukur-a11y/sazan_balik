@@ -6,7 +6,7 @@
 ╚════██║██╔══██║ ███╔╝  ██╔══██║██║╚██╗██║    ██║   ██║╚════██║
 ███████║██║  ██║███████╗██║  ██║██║ ╚████║    ╚██████╔╝███████║
 ╚══════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝     ╚═════╝ ╚══════╝
-SAZAN BALIK AI - v101.0 (BUG FIX & UNIFIED BAR PATCH)
+SAZAN BALIK AI - v102.0 (DYNAMIC SIDEBAR PATCH)
 ================================================================================
 """
 
@@ -25,16 +25,33 @@ from audio_recorder_streamlit import audio_recorder
 from datetime import datetime
 
 # =====================================================================
-# 1. CODES & CSS ENGINE
+# 1. INITIALIZATION & DYNAMIC SIDEBAR STATE
 # =====================================================================
-st.set_page_config(page_title="Sazan Balık OS v101", page_icon="🐟", layout="wide", initial_sidebar_state="expanded")
+def init_states():
+    defaults = {
+        "messages": [], "admin_status": False, "dungeon_status": False,
+        "current_dungeon_enemy": None, "active_panel_tab": None,
+        "council_activation": False, "word_game_word": "", "word_game_active": False,
+        "sidebar_state": "expanded"  # Yan menü durumunu hafızada tutuyoruz
+    }
+    for k, v in defaults.items():
+        if k not in st.session_state: st.session_state[k] = v
+
+init_states()
+
+# Sayfa konfigürasyonunu dinamik state'e göre yüklüyoruz
+st.set_page_config(
+    page_title="Sazan Balık OS v102", 
+    page_icon="🐟", 
+    layout="wide", 
+    initial_sidebar_state=st.session_state.sidebar_state
+)
 
 st.markdown("""
     <style>
     .main { background-color: #060913; color: #f1f5f9; font-family: 'Inter', sans-serif; }
     div[data-testid="stBottomBlock"] { padding-bottom: 0 !important; background: transparent !important; }
     
-    /* Gelişmiş Giriş Çubuğu Tasarımı */
     .stChatInput {
         border: 2px solid #0ea5e9 !important;
         border-radius: 15px !important;
@@ -188,19 +205,8 @@ class SazanAIConception:
         return "\n\n---\n\n".join(log)
 
 # =====================================================================
-# 5. INITIALIZATION
+# 5. USER VALIDATION
 # =====================================================================
-def init_states():
-    defaults = {
-        "messages": [], "admin_status": False, "dungeon_status": False,
-        "current_dungeon_enemy": None, "active_panel_tab": None,
-        "council_activation": False, "word_game_word": "", "word_game_active": False
-    }
-    for k, v in defaults.items():
-        if k not in st.session_state: st.session_state[k] = v
-
-init_states()
-
 if "username" not in st.session_state:
     st.markdown("<h1 style='text-align: center; color:#0ea5e9;'>🐟 Sazan OS Terminal</h1>", unsafe_allow_html=True)
     identity = st.text_input("Akvaryum Kullanıcı Adı Girin:", max_chars=15)
@@ -214,10 +220,15 @@ user = st.session_state.username
 SazanBank.process_interest(user)
 
 # =====================================================================
-# 6. GLOBAL SIDEBAR
+# 6. GLOBAL SIDEBAR (GERİ ÇEKME / KAPATMA BUTONU ENJEKTE EDİLDİ)
 # =====================================================================
 with st.sidebar:
-    st.markdown(f"<h2 style='color:#0ea5e9;'>👤 Profil: {user}</h2>", unsafe_allow_html=True)
+    # İSTEDİĞİN GİZLEME/GERİ ÇEKME BUTONU
+    if st.button("⬅️ Menüyü Gizle", use_container_width=True):
+        st.session_state.sidebar_state = "collapsed"
+        st.rerun()
+        
+    st.markdown(f"<h2 style='color:#0ea5e9; text-align:center;'>👤 Profil: {user}</h2>", unsafe_allow_html=True)
     acc = SazanBank.get_account(user)
     inv = SazanInventory.get_inventory(user)
     
@@ -244,6 +255,12 @@ with st.sidebar:
 # =====================================================================
 # 7. SOHBET AKIŞI VE SİSTEMLER
 # =====================================================================
+# Eğer yan menü kapatıldıysa ana ekranda geri açma butonu gösteriyoruz
+if st.session_state.sidebar_state == "collapsed":
+    if st.button("➡️ Menüyü Göster"):
+        st.session_state.sidebar_state = "expanded"
+        st.rerun()
+
 st.title("🐟 Sazan Cyber-Akvaryum Mainframe")
 
 if st.session_state.admin_status:
@@ -355,11 +372,10 @@ if st.session_state.active_panel_tab == "audio":
     st.markdown("</div>", unsafe_allow_html=True)
 
 # =====================================================================
-# 9. BÜTÜNLEŞİK AKILLI KONTROL MERKEZİ (SİSTEMİN KALBİ)
+# 9. BÜTÜNLEŞİK KONTROL MERKEZİ
 # =====================================================================
 st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
 
-# Butonları ve Giriş Alanını Yan Yana Getiren Çözüm Kümesi
 c_plus, c_mic, c_input, c_dg = st.columns([1, 1, 8, 1])
 
 with c_plus:
@@ -373,7 +389,6 @@ with c_mic:
         st.rerun()
 
 with c_input:
-    # Akvaryumun ana giriş çubuğu
     prompt = st.chat_input("Sazan Ağına mesaj gönder...", key="sazan_input_field")
 
 with c_dg:
@@ -381,7 +396,6 @@ with c_dg:
         st.session_state.dungeon_status = not st.session_state.dungeon_status
         st.rerun()
 
-# Mesaj İşleme Algoritması
 if prompt:
     if prompt.strip() == "TURKEY SAZAN":
         st.session_state.admin_status = True; st.rerun()
