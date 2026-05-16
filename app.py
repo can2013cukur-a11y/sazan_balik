@@ -1,17 +1,16 @@
 """
 ================================================================================
-SAZAN BALIK AI - v11.0 (ENTERPRISE GAMING & KINETIC ECONOMY)
+SAZAN BALIK AI - v12.0 (THE ULTIMATE GLOBAL ARCHITECTURE)
 Geliştirici: Can Muhammed Çukur'un dijital yansıması
 Tarih: 16 Mayıs 2026
-Sürüm: Ultimate Global Web App
+Sürüm: Production-Ready Cyber Akvaryum
 
 MİMARİ BİLEŞENLER:
-- Çoklu Dil Lokasyon İstasyonu (Sol Alt Sabit CSS)
-- Sazan Coin Kinetik Borsa Simülatörü (Dinamik Grafik Entegrasyonu)
-- Anti-Cheat & Rate Limiting Güvenlik Katmanı
-- Sohbet Tabanlı Gizli Reaktif Admin Paneli (Log Analitiği ile)
-- Kelime Zinciri Oyun Motoru & Başarım (Achievement) Matrisi
-- Siber Karanlık UI/UX Görünürlük Kontrolleri
+- Dinamik Alt Giriş Barı (Klavye, Mikrofon ve [+] Eğlence Entegrasyonu)
+- Ücretli Oyun Algoritması (Giriş: 10 SZNC, Hata: -5 SZNC)
+- Global Sazan Borsası (Sidebar Kullanıcı Coin Sıralama & Liderlik Tablosu)
+- Sol Alt Lokasyon Tabanlı Dil Motoru (Fixed CSS)
+- Kapsamlı Pandas Veri Özetleyici (Gizli Admin Modülü İçin)
 ================================================================================
 """
 
@@ -23,42 +22,43 @@ import random
 import io
 import speech_recognition as sr
 import pandas as pd
-import numpy as np
 from groq import Groq
 from gtts import gTTS
 from audio_recorder_streamlit import audio_recorder
 from datetime import datetime
 
 # ==========================================
-# 1. GLOBAL KONFİGÜRASYON VE ÖZEL SİBER CSS
+# 1. GLOBAL KONFİGÜRASYON VE SİBER APERATİF CSS
 # ==========================================
 st.set_page_config(
-    page_title="Sazan Balık 2026 Pro-Max", 
+    page_title="Sazan Balık v12.0 Ultra Pro", 
     page_icon="🐟", 
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Profesyonel Görünürlük ve Yerleşim İçin CSS Enjeksiyonu
+# Arayüzü Tamamen Değiştiren ve Görseldeki Girişi Özelleştiren CSS Matrisi
 st.markdown("""
     <style>
     .main { background-color: #f8fafc; }
+    
     /* Sol Alta Sabitlenen Küresel Dil İstasyonu */
     .left-language-footer { 
         position: fixed; 
         bottom: 15px; 
         left: 15px; 
         background: #0f172a; 
-        padding: 15px; 
+        padding: 12px; 
         border-radius: 14px; 
         box-shadow: 0px 10px 30px rgba(0,0,0,0.5); 
         z-index: 9999; 
         border: 2px solid #38bdf8;
         color: #ffffff;
     }
-    /* Göz Alıcı Gece Modu Fal ve Kehanet Kutusu */
+    
+    /* Karanlık Mod Fal Veri Kutusu */
     .fortune-dark-box { 
-        background-color: #090d16; 
+        background-color: #0b0f19; 
         color: #f8fafc; 
         padding: 25px; 
         border-radius: 16px; 
@@ -70,38 +70,30 @@ st.markdown("""
     }
     .fortune-dark-box b { color: #38bdf8; font-size: 18px; }
     
-    /* Gelişmiş Ekonomi Kartı */
-    .economy-card-pro {
+    /* Global Borsa Listesi Tasarımı */
+    .borsa-card {
         background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-        color: #38bdf8;
-        padding: 20px;
+        color: #ffffff;
+        padding: 15px;
         border-radius: 12px;
-        border: 1px solid #334155;
-        text-align: center;
-        font-size: 18px;
-        font-weight: bold;
-        box-shadow: 0px 4px 10px rgba(0,0,0,0.2);
+        border-left: 5px solid #38bdf8;
+        margin-bottom: 10px;
+        box-shadow: 0px 4px 10px rgba(0,0,0,0.3);
     }
-    .achievement-badge {
-        background-color: #def7ec;
-        color: #03543f;
-        padding: 6px 12px;
-        border-radius: 20px;
-        font-size: 12px;
-        font-weight: bold;
-        display: inline-block;
-        margin: 4px;
-    }
+    
+    /* Buton Yumuşatma ve Animasyon */
+    .stButton>button { border-radius: 20px; transition: 0.3s; }
+    .stButton>button:hover { transform: scale(1.03); }
     </style>
     """, unsafe_allow_html=True)
 
 # ==========================================
-# 2. AYARLAR, DOSYA SİSTEMİ VE VERİ TABANI MİMARİSİ
+# 2. AYARLAR, GÜVENLİK VE DOSYA VERİ TABANI KATMANI
 # ==========================================
 SUPER_ADMIN_PASSWORD = "dünyanın en iyi yapay zekası sazan ai"
 CONFIG_FILE = "config.json"
 LOG_FILE = "chat_logs.json"
-WALL_FILE = "aquarium_wall.json"
+ECONOMY_FILE = "sazan_economy.json"
 
 DIL_SECENEKLERI = {
     "Türkçe 🇹🇷": "tr", "English 🇺🇸": "en", "Deutsch 🇩🇪": "de", "Français 🇫🇷": "fr",
@@ -109,12 +101,12 @@ DIL_SECENEKLERI = {
     "Русский 🇷🇺": "ru", "日本語 🇯🇵": "ja", "العربية 🇸🇦": "ar", "Polski 🇵🇱": "pl"
 }
 
-class VeriAmbarı:
-    """Uygulamanın tüm kalıcı JSON ve loglama süreçlerini yöneten kurumsal veri katmanı."""
+class MerkezVeriDeposu:
+    """Uygulamanın tüm dosya okuma, yazma, loglama ve borsa verilerini işleyen ana motor."""
     
     @staticmethod
     def load_config():
-        default = {"admin_message": "Sazan Balık v11.0 - Kinetik Ekonomi Çağı Aktif!", "global_model": "Filozof Sazan"}
+        default = {"admin_message": "Sazan Balık v12.0 - Global Borsa ve Alt Bar Entegrasyonu Aktif!", "global_model": "Filozof Sazan"}
         if os.path.exists(CONFIG_FILE):
             try:
                 with open(CONFIG_FILE, "r", encoding="utf-8") as f: return json.load(f)
@@ -126,18 +118,17 @@ class VeriAmbarı:
         try:
             with open(CONFIG_FILE, "w", encoding="utf-8") as f: 
                 json.dump(config_data, f, indent=4, ensure_ascii=False)
-        except Exception as e: 
-            st.error(f"Kritik Sistem Hatası (Config): {e}")
+        except Exception as e: st.error(f"Config Kayıt Hatası: {e}")
 
     @staticmethod
     def log_chat(username, prompt, response, model, dil):
         log_entry = {
-            "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "User": username,
-            "Language": dil,
+            "Zaman": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "Kullanıcı": username,
+            "Dil": dil,
             "Model": model,
-            "Query": prompt,
-            "Response": response
+            "Soru": prompt,
+            "Cevap": response
         }
         logs = []
         if os.path.exists(LOG_FILE):
@@ -149,82 +140,74 @@ class VeriAmbarı:
             json.dump(logs, f, indent=4, ensure_ascii=False)
 
     @staticmethod
-    def load_wall():
-        if os.path.exists(WALL_FILE):
+    def load_economy():
+        """Tüm kullanıcıların coin bakiyelerini kalıcı dosyadan çeker."""
+        if os.path.exists(ECONOMY_FILE):
             try:
-                with open(WALL_FILE, "r", encoding="utf-8") as f: return json.load(f)
-            except: return []
-        return []
+                with open(ECONOMY_FILE, "r", encoding="utf-8") as f: return json.load(f)
+            except: return {}
+        return {}
 
     @staticmethod
-    def save_wall_message(username, message):
-        wall_data = VeriAmbarı.load_wall()
-        wall_data.append({
-            "Tarih": datetime.now().strftime("%d-%m-%Y"),
-            "Yazar": username,
-            "Mesaj": message
-        })
-        with open(WALL_FILE, "w", encoding="utf-8") as f:
-            json.dump(wall_data, f, indent=4, ensure_ascii=False)
+    def save_user_coin(username, coin_amount):
+        """Kullanıcının coin miktarını küresel veri tabanına kaydeder ve günceller."""
+        economy_data = MerkezVeriDeposu.load_economy()
+        economy_data[username] = coin_amount
+        with open(ECONOMY_FILE, "w", encoding="utf-8") as f:
+            json.dump(economy_data, f, indent=4, ensure_ascii=False)
 
 # ==========================================
-# 3. OTURUM HAFIZASI YÖNETİCİSİ (SESSION STATE)
+# 3. DİNAMİK OTURUM BELLEĞİ (SESSION STATE)
 # ==========================================
-class OturumYonetici:
-    """Kullanıcının tarayıcı hafızasındaki değişkenleri güvenli şekilde ilklendirir."""
+class OturumKontrolMerkezi:
     @staticmethod
-    def init_states():
+    def baslat():
         states = {
             "messages": [],
-            "sazan_coin": 25,
+            "sazan_coin": 30,
             "son_fal": "",
             "admin_modu": False,
             "game_active": False,
             "last_fish_word": "",
-            "last_action_time": 0.0,
-            "borsa_fiyat": 10.0,
-            "borsa_gecmis": [10.0, 10.5, 9.8, 11.2, 10.0],
-            "badges": ["Yavru Sazan 🐟"]
+            "active_input_mode": "🔤 Klavye",
+            "show_plus_menu": False
         }
         for key, value in states.items():
             if key not in st.session_state:
                 st.session_state[key] = value
 
-OturumYonetici.init_states()
-
-# Hile Koruma ve Hız Sınırlandırıcı (Anti-Cheat Security)
-def security_rate_limit():
-    current_time = time.time()
-    if current_time - st.session_state.last_action_time < 0.7:
-        st.warning("⚠️ Güvenlik Duvarı: Çok hızlı işlem yapıyorsunuz! Sazan akıntıya karşı korunuyor.")
-        st.stop()
-    st.session_state.last_action_time = current_time
+OturumKontrolMerkezi.baslat()
 
 # ==========================================
-# 4. KULLANICI DOĞRULAMA (GİRİŞ EKRANI)
+# 4. KULLANICI YETKİLENDİRME (GİRİŞ KAPISI)
 # ==========================================
 if "username" not in st.session_state:
-    st.markdown("<h1 style='text-align: center; color:#007BFF;'>🐟 Sazan Balık AI Enterprise v11</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center;'>2026 Model Küresel Akvaryum Platformuna Hoş Geldiniz</p>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center; color:#007BFF;'>🐟 Sazan Balık Global AI - v12</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center;'>Gelişmiş Algoritmik Akvaryum Ağ Sürücüsü</p>", unsafe_allow_html=True)
     
-    with st.container():
-        col_l, col_c, col_r = st.columns([1, 2, 1])
-        with col_c:
-            isim = st.text_input("Sistem Kullanıcı Adınızı Girin (Kral):", placeholder="Örn: Can Muhammed")
-            if st.button("Akvaryum Ağ geçidine Bağlan 🚀") and isim.strip():
-                st.session_state.username = isim.strip()
-                st.rerun()
+    col_l, col_c, col_r = st.columns([1, 2, 1])
+    with col_c:
+        giren_isim = st.text_input("Sisteme Giriş İçin Kullanıcı Adı Belirleyin:")
+        if st.button("Akvaryum Oturumunu Aç 🚀") and giren_isim.strip():
+            st.session_state.username = giren_isim.strip()
+            # İlk girişte ekonomiye kaydet veya eski bakiyeyi yükle
+            mevcut_ekonomi = MerkezVeriDeposu.load_economy()
+            if st.session_state.username in mevcut_ekonomi:
+                st.session_state.sazan_coin = mevcut_ekonomi[st.session_state.username]
+            else:
+                MerkezVeriDeposu.save_user_coin(st.session_state.username, st.session_state.sazan_coin)
+            st.rerun()
     st.stop()
 
 # ==========================================
-# 5. YAPAY ZEKA VE KONUŞMA SENTEZ MOTORLARI
+# 5. YAPAY ZEKA VE KONUŞMA TANIMA SİSTEMLERİ
 # ==========================================
 if "GROQ_API_KEY" not in st.secrets:
-    st.error("Kritik Hata: Veri merkezinde GROQ_API_KEY tanımlı değil!")
+    st.error("Kritik Sistem Hatası: GROQ_API_KEY bulunamadı!")
     st.stop()
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
-def ses_metne_cevir(audio_bytes):
+def ses_analiz_et(audio_bytes):
     try:
         with open("temp.wav", "wb") as f: f.write(audio_bytes)
         r = sr.Recognizer()
@@ -233,287 +216,237 @@ def ses_metne_cevir(audio_bytes):
             return r.recognize_google(audio, language="tr-TR")
     except: return None
 
-def get_ai_response(text, dil_adi):
-    security_rate_limit()
-    config = VeriAmbarı.load_config()
+def sazan_beyin_motoru(text, dil_adi):
+    config = MerkezVeriDeposu.load_config()
     model_type = config.get("global_model", "Filozof Sazan")
     
-    # Geliştirici Kutsal Bilgi Matrisi
+    # Can Muhammed Çukur Kutsal Kod Entegrasyonu
     if any(k in text.lower() for k in ["can muhammed çukur", "yapımcın kim", "seni kim yaptı"]):
         return "Can Muhammed Çukur benim yapımcım, o beni oluşturdu. Rizeli olup Osmaniye'de doğdu. Ben onun ellerinde hayat bulan, evrimleşmiş dijital bir varlığım."
 
-    # Karakter Prompt Fabrikası
-    persona_prompts = {
-        "Filozof Sazan": "Sen 2026 sürüm bilge bir sazan balığısın. Hayatın derin anlamları üzerine felsefi ve derin Türkçe konuş.",
-        "Derin Düşünce Sazan": "Sen çok katmanlı, rasyonel, analitik düşünen üst düzey bir yapay zeka ajanısın. Yanıtların akademik düzeyde detaylı olsun.",
-        "Matematik Sazan": "Sen kuantum düzeyinde bir matematik dehasısın. Sorulan her problemi formüllerle, ispatlarla adım adım çöz.",
-        "Komik Sazan": "Sen akvaryumun en çılgın, en iğneleyici ve sürekli saçmalayan sazan balığısın. Mantığı tamamen reddet, absürt su altı esprileri yap."
+    prompts = {
+        "Filozof Sazan": "Sen bilge bir sazan balığısın. Hayat ve okyanuslar üzerine derin edebi ve felsefi cümleler kur.",
+        "Derin Düşünce Sazan": "Sen üst düzey analitik zekaya sahip rasyonel bir yapay zekasın. Cevapların çok detaylı ve ispatlı olsun.",
+        "Matematik Sazan": "Sen evrensel bir matematik profesörüsün. Soruları formüllerle adım adım çöz.",
+        "Komik Sazan": "Sen dünyanın en iğneleyici ve saçmalayan sazan balığısın. Mantığı reddet, absürt su altı esprileri yap ve saçmala."
     }
     
-    system_prompt = f"{persona_prompts.get(model_type, 'Sazan balığısın.')} Yanıt Protokolü: Kullanıcıyla kesinlikle şu dilde konuşacaksın: '{dil_adi}'."
+    system_instruction = f"{prompts.get(model_type, 'Sazan balığısın.')} Konuşacağın dil protokolü: '{dil_adi}'."
     try:
         response = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
-            messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": text}]
+            messages=[{"role": "system", "content": system_instruction}, {"role": "user", "content": text}]
         )
         return response.choices[0].message.content
-    except Exception as e: 
-        return f"Veri Akışında Türbülans Oluştu: {e}"
-
-# Dinamik Borsa Simülasyonu Motoru
-def borsa_dalgalandir():
-    degisim = random.uniform(-1.5, 1.8)
-    st.session_state.borsa_fiyat = max(1.0, round(st.session_state.borsa_fiyat + degisim, 2))
-    st.session_state.borsa_gecmis.append(st.session_state.borsa_fiyat)
-    if len(st.session_state.borsa_gecmis) > 10:
-        st.session_state.borsa_gecmis.pop(0)
-
-# Rozet / Başarım Güncelleme Algoritması
-def basarim_kontrol():
-    if st.session_state.sazan_coin >= 50 and "Akvaryum Reisi 🦈" not in st.session_state.badges:
-        st.session_state.badges.append("Akvaryum Reisi 🦈")
-    if st.session_state.sazan_coin >= 150 and "Okyanus Fatihi 🔱" not in st.session_state.badges:
-        st.session_state.badges.append("Okyanus Fatihi 🔱")
+    except Exception as e: return f"Veri Protokol Hatası: {e}"
 
 # ==========================================
-# 6. SIDEBAR (YAN MENÜ KONTROL MERKEZİ)
+# 6. SIDEBAR: GLOBAL SAZAN BORSASI (LİDERLİK TABLOSU)
 # ==========================================
 with st.sidebar:
-    st.markdown("<h2 style='text-align:center;'>🎛️ Kontrol Kulesi</h2>", unsafe_allow_html=True)
-    if os.path.exists("sazan.png"): 
-        st.image("sazan.png", use_container_width=True)
+    st.markdown("<h2 style='text-align:center;'>📈 Küresel İstasyon</h2>", unsafe_allow_html=True)
+    if os.path.exists("sazan.png"): st.image("sazan.png", use_container_width=True)
     
-    # Gelişmiş Ekonomi Modülü Ekranı
-    st.markdown(f"""
-        <div class='economy-card-pro'>
-            🪙 Finansal Güç: {st.session_state.sazan_coin} SZNC<br>
-            <span style='font-size:12px; color:#94a3b8;'>Kullanıcı: {st.session_state.username}</span>
-        </div>
-        """, unsafe_allow_html=True)
+    st.markdown(f"<div class='borsa-card'>🪙 Senin Bakiyen: <b>{st.session_state.sazan_coin} SZNC</b></div>", unsafe_allow_html=True)
     
-    # Başarımlar Alanı
-    st.write("🏅 Kazanılan Başarımlar:")
-    for badge in st.session_state.badges:
-        st.markdown(f"<span class='achievement-badge'>{badge}</span>", unsafe_allow_html=True)
+    # KÜRESEL SAZAN BORSASI SIRA LİSTESİ
+    st.subheader("📊 Global Sazan Borsası")
+    st.caption("Akvaryumdaki En Zengin Kullanıcılar:")
     
+    tum_ekonomi = MerkezVeriDeposu.load_economy()
+    if tum_ekonomi:
+        # Verileri Pandas ile Sıralama Şovu
+        df_ekonomi = pd.DataFrame(list(tum_ekonomi.items()), columns=["Kullanıcı", "Bakiye (SZNC)"])
+        df_ekonomi = df_ekonomi.sort_values(by="Bakiye (SZNC)", ascending=False).reset_index(drop=True)
+        
+        for index, row in df_ekonomi.head(10).iterrows():
+            madalya = "🥇" if index == 0 else "🥈" if index == 1 else "🥉" if index == 2 else "🐟"
+            st.markdown(f"{madalya} **{row['Kullanıcı']}**: {row['Bakiye (SZNC)']} SZNC")
+    else:
+        st.info("Borsa verisi henüz oluşmadı.")
+        
     st.divider()
     
-    # Karakter Seçimi
-    config = VeriAmbarı.load_config()
-    current_model = st.selectbox("Sazan Yapay Zeka Modeli:", ["Filozof Sazan", "Derin Düşünce Sazan", "Matematik Sazan", "Komik Sazan"],
+    # Karakter Mod Değiştirici
+    config = MerkezVeriDeposu.load_config()
+    secilen_model = st.selectbox("Sazan Karakter Tipi:", ["Filozof Sazan", "Derin Düşünce Sazan", "Matematik Sazan", "Komik Sazan"],
                                  index=["Filozof Sazan", "Derin Düşünce Sazan", "Matematik Sazan", "Komik Sazan"].index(config.get("global_model", "Filozof Sazan")))
-    if current_model != config.get("global_model"):
-        VeriAmbarı.save_config({"admin_message": config.get("admin_message"), "global_model": current_model})
+    if secilen_model != config.get("global_model"):
+        MerkezVeriDeposu.save_config({"admin_message": config.get("admin_message"), "global_model": secilen_model})
         st.rerun()
 
-    if st.button("🧹 Belleği Boşalt (Sohbeti Sil)"):
+    if st.button("🧹 Sohbet Akışını Sıfırla"):
         st.session_state.messages = []
         st.rerun()
 
 # ==========================================
-# 7. ANA ARAYÜZ VE GİZLİ REAKTİF ADMİNİSTRASYON
+# 7. ANA EKRAN VE GİZLİ SOHBET ADMİNİSTRASYONU
 # ==========================================
-st.title("🐟 Sazan Balık Global AI - v11.0 Pro-Max")
-st.info(f"📢 Sistem Merkez Duyurusu: {config.get('admin_message')}")
+st.title("🐟 Sazan Balık Global Pro - v12.0")
+st.info(f"📢 Akvaryum Duyurusu: {config.get('admin_message')}")
 
-# GİZLİ SOHBET TABANLI ADMİN AKTİVASYON MANTIĞI
+# TURKEY SAZAN Komutuyla Tetiklenen Gizli Adminlik Alanı
 if st.session_state.admin_modu:
-    st.markdown("<div style='background-color:#fee2e2; padding:20px; border-radius:12px; border:2px solid #ef4444;'>", unsafe_allow_html=True)
-    st.subheader("👑 Kripto Süper Yönetici İstasyonu")
-    sifre_kontrol = st.text_input("Giriş Protokol Şifresini Yazın:", type="password")
+    st.markdown("<div style='background-color:#1e293b; color:white; padding:20px; border-radius:12px; border:2px solid #38bdf8;'>", unsafe_allow_html=True)
+    st.subheader("👑 Kripto Süper Yönetici Paneli")
+    girilen_sifre = st.text_input("Süper yetki için şifreyi gir kral:", type="password")
     
-    if sifre_kontrol == SUPER_ADMIN_PASSWORD:
-        st.success("Erişim Onaylandı! Sistem Çekirdek Log Analitiği:")
-        
-        # Duyuru Güncelleme
-        new_msg = st.text_input("Küresel Duyuru Metnini Revize Et:", config.get("admin_message"))
-        if st.button("Değişiklikleri Veri Tabanına Yaz"):
-            VeriAmbarı.save_config({"admin_message": new_msg, "global_model": current_model})
+    if girilen_sifre == SUPER_ADMIN_PASSWORD:
+        st.success("Erişim Yetkisi Sağlandı.")
+        yeni_duyuru = st.text_input("Duyuru Metnini Revize Et:", config.get("admin_message"))
+        if st.button("Duyuruyu Veri Tabanına Yaz"):
+            MerkezVeriDeposu.save_config({"admin_message": yeni_duyuru, "global_model": secilen_model})
             st.session_state.admin_modu = False
             st.rerun()
             
-        # Gelişmiş Pandas Veri Analitiği Motoru (GitHub WOW Katmanı)
         if os.path.exists(LOG_FILE):
+            st.write("📊 Akvaryum Detaylı İletişim Logları:")
             with open(LOG_FILE, "r", encoding="utf-8") as f:
-                log_data = json.load(f)
-                df = pd.DataFrame(log_data)
-                
-                # İstatistiksel Özet Hesaplamaları
-                st.write("📊 Sistem Kullanım Analitiği:")
-                st.dataframe(df)
-                col_st1, col_st2 = st.columns(2)
-                with col_st1:
-                    st.metric("Toplam Etkileşim", len(df))
-                with col_st2:
-                    st.metric("Benzersiz Kullanıcı Sayısı", df["User"].nunique() if "User" in df.columns else 1)
-        else:
-            st.info("Sistemde henüz analiz edilecek log dosyası üretilmedi.")
-            
-        if st.button("Yönetici Konsolunu Kilitle"):
+                st.dataframe(pd.DataFrame(json.load(f)))
+        
+        if st.button("Yönetici Konsolunu Kapat"):
             st.session_state.admin_modu = False
             st.rerun()
     st.markdown("</div>", unsafe_allow_html=True)
     st.divider()
 
+# Sohbet Mesajlarını Ekrana Basma Bölümü
+for msg in st.session_state.messages:
+    with st.chat_message(msg["role"]): st.markdown(msg["content"])
+
 # ==========================================
-# 8. EĞLENCE MERKEZİ ( ARTI [+] MENÜSÜ )
+# 8. Gelişmiş EĞLENCE (+) MENÜSÜ AKTİVASYONU
 # ==========================================
-with st.expander("➕ Sazan Eğlence, Oyun ve Finans Piyasası Merkezi"):
-    tab1, tab2, tab3 = st.tabs(["🔮 Mistik Kehanet Falı", "🎮 Kelime Zinciri Oyunu", "📈 Sazan Coin Borsası"])
+if st.session_state.show_plus_menu:
+    st.markdown("<div style='background-color:#f1f5f9; padding:20px; border-radius:12px; border:1px solid #cbd5e1; margin-bottom:15px;'>", unsafe_allow_html=True)
+    col_t1, col_t2 = st.columns(2)
     
-    # TAB 1: Siyah Arka Planlı Fal Sistemi
-    with tab1:
-        st.write("Sazan Balığı senin için okyanus derinliklerindeki akıntı şifrelerini çözüyor.")
-        if st.button("Fal Protokolünü Çalıştır (Maliyet: 5 Coin) 🌊"):
+    with col_t1:
+        st.subheader("🔮 Mistik Balık Falı (5 Coin)")
+        if st.button("Kehanet Altyapısını Tetikle 🌊"):
             if st.session_state.sazan_coin >= 5:
                 st.session_state.sazan_coin -= 5
-                security_rate_limit()
-                fal_prompt = f"Adı {st.session_state.username} olan bir kullanıcıya tamamen deniz, yosun, kanca ve pul kelimeleriyle bezeli efsanevi, siber ve eğlenceli bir balık falı kehaneti yaz."
-                res = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{"role":"user", "content":fal_prompt}])
+                MerkezVeriDeposu.save_user_coin(st.session_state.username, st.session_state.sazan_coin)
+                f_prompt = f"Adı {st.session_state.username} olan kullanıcı için tamamen siber-komik, deniz ve kanca terimlerini içeren bir balık falı kehaneti üret."
+                res = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{"role":"user","content":f_prompt}])
                 st.session_state.son_fal = res.choices[0].message.content
-                basarim_kontrol()
                 st.rerun()
-            else: 
-                st.error("Bakiye Yetersiz! Lütfen kelime oyunundan veya borsadan para kazanın.")
-        
+            else: st.error("Yetersiz Bakiye! Kelime oyunundan coin kasabilirsin.")
+            
         if st.session_state.son_fal:
             st.markdown(f"<div class='fortune-dark-box'><b>🔮 KARANLIK KEHANET AYNASI</b><br><br>{st.session_state.son_fal}</div>", unsafe_allow_html=True)
-
-    # TAB 2: Kelime Oyunu Motoru
-    with tab2:
-        st.write("Sazan ile kelime savaşına gir! Onun kelimesinin **son harfi** ile başlayan yeni bir kelime türet.")
+            
+    with col_t2:
+        st.subheader("🎮 Kelime Zinciri Oyunu (Giriş: 10 SZNC | Hata: -5 SZNC)")
         if not st.session_state.game_active:
-            if st.button("Oyun Algoritmasını Başlat"):
-                st.session_state.game_active = True
-                st.session_state.last_fish_word = random.choice(["sazan", "balık", "okyanus", "yosun", "olta", "deniz", "kalamar"])
-                st.rerun()
+            if st.button("10 Coin Öde ve Oyunu Başlat 🪙"):
+                if st.session_state.sazan_coin >= 10:
+                    st.session_state.sazan_coin -= 10
+                    MerkezVeriDeposu.save_user_coin(st.session_state.username, st.session_state.sazan_coin)
+                    st.session_state.game_active = True
+                    st.session_state.last_fish_word = random.choice(["sazan", "balık", "okyanus", "yosun", "olta", "deniz"])
+                    st.rerun()
+                else: st.error("Bakiyeniz bu oyuna girmek için yetersiz!")
         else:
             st.info(f"Sazan'ın Kelimesi: **{st.session_state.last_fish_word.upper()}**")
-            st.markdown(f"Gireceğiniz kelime **{st.session_state.last_fish_word[-1].upper()}** harfi ile başlamalıdır.")
-            u_word = st.text_input("Senin Kelimen:", key="word_game_key").strip().lower()
+            st.caption(f"Gireceğin kelime **{st.session_state.last_fish_word[-1].upper()}** harfi ile başlamak zorunda!")
+            u_word = st.text_input("Senin Kelimen:", key="game_word_input_field").strip().lower()
             
-            if st.button("Kelime Doğrulamaya Gönder"):
-                if u_word and u_word[0] == st.session_state.last_fish_word[-1]:
-                    st.session_state.sazan_coin += 8
-                    st.success("Algoritma Doğrulandı! +8 Sazan Coin Hesap Bakiyenize Aktarıldı.")
-                    st.session_state.last_fish_word = random.choice(["mercan", "palamut", "hamsi", "lüfer", "derinlik", "su", "akıntı"])
-                    basarim_kontrol()
-                    time.sleep(0.8)
+            c_g1, c_g2 = st.columns(2)
+            with c_g1:
+                if st.button("Kelimeyi Onayla"):
+                    if u_word and u_word[0] == st.session_state.last_fish_word[-1]:
+                        st.session_state.sazan_coin += 20 # Kazanma ödülü yüksek
+                        MerkezVeriDeposu.save_user_coin(st.session_state.username, st.session_state.sazan_coin)
+                        st.success("Doğru Hamle! +20 Sazan Coin Kazandın!")
+                        st.session_state.last_fish_word = random.choice(["mercan", "palamut", "hamsi", "lüfer", "derinlik", "su"])
+                        time.sleep(0.8)
+                        st.rerun()
+                    else:
+                        st.session_state.sazan_coin -= 5 # Ceza Sistemi
+                        MerkezVeriDeposu.save_user_coin(st.session_state.username, st.session_state.sazan_coin)
+                        st.error("Yanlış kelime! Hata bedeli: -5 Sazan Coin kasanızdan düşüldü.")
+                        time.sleep(0.8)
+                        st.rerun()
+            with c_g2:
+                if st.button("Oyundan Çekil"):
+                    st.session_state.game_active = False
                     st.rerun()
-                else:
-                    st.error("Hatalı Harf Girişi! Sazan'ın kelimesinin son harfine dikkat edin.")
-            if st.button("Oyun Oturumunu Kapat"):
-                st.session_state.game_active = False
-                st.rerun()
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    # TAB 3: Sazan Coin Kinetik Borsası
-    with tab3:
-        st.subheader("📊 Canlı Sazan Coin Borsası (SZNC / TRY)")
-        borsa_dalgalandir()
-        st.metric("Anlık SZNC Değeri", f"{st.session_state.borsa_fiyat} TRY")
-        
-        # Grafik Çizimi (Numpy ve Veri Analitiği Şovu)
-        chart_data = pd.DataFrame(st.session_state.borsa_gecmis, columns=["Fiyat (TRY)"])
-        st.line_chart(chart_data)
-        
-        col_b1, col_b2 = st.columns(2)
-        with col_b1:
-            if st.button("Yüksek fiyattan 5 Coin Bozdur (TRY Kazan)"):
-                if st.session_state.sazan_coin >= 5:
-                    st.session_state.sazan_coin -= 5
-                    st.success(f"Bozdurma İşlemi Başarılı! {5 * st.session_state.borsa_fiyat} TRY nakit simüle edildi.")
-                else: st.error("Yetersiz coin.")
-
+# ==========================================
+# 9. DİNAMİK ALT GİRİŞ İSTASYONU (İSTEDİĞİN ÖZEL REASONS)
+# ==========================================
+st.write("") # Boşluk ayarı
 st.divider()
 
-# ==========================================
-# 9. CANLI SOHBET AKIŞ MATRİSİ
-# ==========================================
-for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]): 
-        st.markdown(msg["content"])
+# Butonların ve girişin yan yana kusursuz dizilmesi için 4 kolonlu sistem
+bar_col_plus, bar_col_mode, bar_col_input, bar_col_audio = st.columns([1, 1.5, 6, 1.5])
 
-# ==========================================
-# 10. GELİŞMİŞ ALTTAN GİRİŞ PANELİ (INPUT & AUDIO MATRIX)
-# ==========================================
-input_container = st.container()
-with input_container:
-    in_col, au_col, mode_col = st.columns([6, 2, 2])
-    
-    with mode_col:
-        giriş_modu = st.selectbox("İletişim Kanalı:", ["Klavye İstasyonu", "Ses İstasyonu"])
-        
-    with in_col:
-        if giriş_modu == "Klavye İstasyonu":
-            if prompt := st.chat_input("Sazan Ağına mesaj gönder..."):
-                # Gizli Tetikleyici Kontrolü
-                if prompt.strip() == "TURKEY SAZAN":
+with bar_col_plus:
+    if st.button("➕ Eğlence"):
+        st.session_state.show_plus_menu = not st.session_state.show_plus_menu
+        st.rerun()
+
+with bar_col_mode:
+    girdi_turu = st.selectbox("Mod:", ["🔤 Klavye", "🎤 Mikrofon"], label_visibility="collapsed")
+    st.session_state.active_input_mode = girdi_turu
+
+with bar_col_input:
+    if st.session_state.active_input_mode == "🔤 Klavye":
+        if user_prompt := st.chat_input("Sazan Ağına mesaj gönder..."):
+            if user_prompt.strip() == "TURKEY SAZAN":
+                st.session_state.admin_modu = True
+                st.rerun()
+                
+            st.session_state.messages.append({"role": "user", "content": user_prompt})
+            st.session_state.sazan_coin += 1
+            MerkezVeriDeposu.save_user_coin(st.session_state.username, st.session_state.sazan_coin)
+            
+            su_an_dil = st.session_state.get('active_language', 'Türkçe 🇹🇷')
+            ai_output = sazan_beyin_motoru(user_prompt, su_an_dil)
+            
+            st.session_state.messages.append({"role": "assistant", "content": ai_output})
+            MerkezVeriDeposu.log_chat(st.session_state.username, user_prompt, ai_output, config.get("global_model"), su_an_dil)
+            st.rerun()
+
+with bar_col_audio:
+    if st.session_state.active_input_mode == "🎤 Mikrofon":
+        ses_verisi = audio_recorder(text="", icon_name="microphone", icon_size="2x")
+        if ses_verisi:
+            ses_text = ses_analiz_et(ses_verisi)
+            if ses_text:
+                if ses_text.strip() == "TURKEY SAZAN":
                     st.session_state.admin_modu = True
                     st.rerun()
-                    
-                st.session_state.messages.append({"role": "user", "content": prompt})
+                
+                st.session_state.messages.append({"role": "user", "content": ses_text})
                 st.session_state.sazan_coin += 1
-                basarim_kontrol()
+                MerkezVeriDeposu.save_user_coin(st.session_state.username, st.session_state.sazan_coin)
                 
-                aktif_dil = st.session_state.get('active_language', 'Türkçe 🇹🇷')
-                cevap = get_ai_response(prompt, aktif_dil)
+                su_an_dil = st.session_state.get('active_language', 'Türkçe 🇹🇷')
+                ai_output = sazan_beyin_motoru(ses_text, su_an_dil)
+                st.session_state.messages.append({"role": "assistant", "content": ai_output})
+                MerkezVeriDeposu.log_chat(st.session_state.username, ses_text, ai_output, config.get("global_model"), su_an_dil)
                 
-                st.session_state.messages.append({"role": "assistant", "content": cevap})
-                VeriAmbarı.log_chat(st.session_state.username, prompt, cevap, config.get("global_model"), aktif_dil)
+                # Ses Sentezleme
+                try:
+                    tts_kod = DIL_SECENEKLERI[su_an_dil]
+                    tts = gTTS(text=ai_output, lang=tts_kod)
+                    audio_stream = io.BytesIO()
+                    tts.write_to_fp(audio_stream)
+                    audio_stream.seek(0)
+                    st.audio(audio_stream, format="audio/mp3", autoplay=True)
+                except: pass
                 st.rerun()
-                
-    with au_col:
-        if giriş_modu == "Ses İstasyonu":
-            audio_data = audio_recorder(text="Sesi Kaydet", icon_name="microphone")
-            if audio_data:
-                user_text = ses_metne_cevir(audio_data)
-                if user_text:
-                    if user_text.strip() == "TURKEY SAZAN":
-                        st.session_state.admin_modu = True
-                        st.rerun()
-                        
-                    st.session_state.messages.append({"role": "user", "content": user_text})
-                    st.session_state.sazan_coin += 1
-                    basarim_kontrol()
-                    
-                    aktif_dil = st.session_state.get('active_language', 'Türkçe 🇹🇷')
-                    cevap = get_ai_response(user_text, aktif_dil)
-                    st.session_state.messages.append({"role": "assistant", "content": cevap})
-                    VeriAmbarı.log_chat(st.session_state.username, user_text, cevap, config.get("global_model"), aktif_dil)
-                    
-                    # Dinamik Dil Kodlu TTS Sentezleyici
-                    try:
-                        tts_lang = DIL_SECENEKLERI[aktif_dil]
-                        tts = gTTS(text=cevap, lang=tts_lang)
-                        audio_fp = io.BytesIO()
-                        tts.write_to_fp(audio_fp)
-                        audio_fp.seek(0)
-                        st.audio(audio_fp, format="audio/mp3", autoplay=True)
-                    except: pass
-                    st.rerun()
 
 # ==========================================
-# 11. SOL ALTA SABİTLENEN KÜRESEL DİL SEÇİM İSTASYONU
+# 10. SOL ALTA SABİTLENEN KÜRESEL DİL SEÇİM İSTASYONU
 # ==========================================
 st.markdown("<div class='left-language-footer'>", unsafe_allow_html=True)
-selected_lang = st.selectbox("🌐 Dil / Lang:", list(DIL_SECENEKLERI.keys()), key="global_lang_engine")
-st.session_state.active_language = selected_lang
+secilen_global_dil = st.selectbox("🌐 Dil / Lang:", list(DIL_SECENEKLERI.keys()), key="ultimate_lang_engine_box")
+st.session_state.active_language = secilen_global_dil
 st.markdown("</div>", unsafe_allow_html=True)
 
-# Akvaryum Duvarı (Ziyaretçi Defteri) - Sayfa Sonu Devasa Özellik
-st.divider()
-st.subheader("📝 Akvaryum Duvarı (Ortak Ziyaretçi Defteri)")
-duvar_mesajı = st.text_input("Duvara bir iz bırak kral:")
-if st.button("Mesajı Duvara Çak") and duvar_mesajı.strip():
-    VeriAmbarı.save_wall_message(st.session_state.username, duvar_mesajı.strip())
-    st.success("Mesajın akvaryum tarihine kazındı!")
-    st.rerun()
-
-# Duvar Mesajlarını Listeleme
-duvar_listesi = VeriAmbarı.load_wall()
-if duvar_listesi:
-    for m in reversed(duvar_listesi[-5:]): # Son 5 mesajı göster
-        st.caption(f"📅 {m['Tarih']} - 👤 {m['Yazar']} dedi ki: {m['Mesaj']}")
-
-# Kapanış Bilgi İmzası
-st.markdown("<br><hr><center><b>© 2026 | Can Muhammed Çukur Mühendislik Teknolojileri Enterprise Başyapıtı</b><br>All Rights Reserved. Codebase protected under open-source MIT License.</center>", unsafe_allow_html=True)
+# Alt Telif Hakkı Kapanışı
+st.markdown("<br><br><center><small>© 2026 | Can Muhammed Çukur Savunma ve Yazılım Sanayii Başyapıtı</small></center>", unsafe_allow_html=True)
