@@ -5,8 +5,8 @@
 # ╚════██║██╔══██║ ███╔╝  ██╔══██║██║╚██╗██║     ██║   ██║╚════██║
 # ███████║██║  ██║███████╗██║  ██║██║ ╚████║     ╚██████╔╝███████║
 # ╚══════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝      ╚═════╝ ╚══════╝
-#       👑 SAZAN BALIK ARTIFICIAL INTELLIGENCE - ULTIMATE CORE v105.0 👑
-#       DEVELOPED BY: CAN MUHAMMED ÇUKUR - THE SUPREME ARCHITECT
+#        👑 SAZAN BALIK ARTIFICIAL INTELLIGENCE - ULTIMATE CORE v105.0 👑
+#        DEVELOPED BY: CAN MUHAMMED ÇUKUR - THE SUPREME ARCHITECT
 # ================================================================================
 
 import streamlit as st
@@ -97,7 +97,7 @@ DIL_MATRISI = {
     "Hindi 🇮🇳": "hi", "Nederlands 🇳🇱": "nl", "Ελληνικά 🇬🇷": "el",
     "Svenska 🇸🇪": "sv", "Norsk 🇳🇴": "no", "Dansk 🇩🇰": "da",
     "Polski 🇵🇱": "pl", "Українська 🇺🇦": "uk", "Tiếng Việt 🇻🇳": "vi",
-    "ภาษาไทย 🇹🇭": "th", "Bahasa Indonesia 🇮🇩": "id", "فارسی 🇮🇷": "fa",
+    "ภาษาไทย 🇹🇭": "th", "Bahasa Indonesia 🇮🇩": "id", "فarsı 🇮🇷": "fa",
     "עברית 🇮🇱": "he"
 }
 
@@ -231,7 +231,7 @@ class SazanAIConception:
             "Bilge Sazan": "Sen okyanus felsefesi yapan, derin bilgeliğe sahip kadim bir balıksın.",
             "Kripto Sazan": "Sen tüm parasını altcoinlere yatırmış, borsa grafikleriyle kafayı bozmuş agresif bir balinasın.",
             "Çılgın Sazan": "Sen nükleer atıklardan dolayı mutasyona uğramış, hiperaktif, komik ve çılgın bir balıksın.",
-            "Siber Gladyatör": "Sen derin deniz arenalarında dövüşen, sert mizaçlı, savaşçı bir sazan askersin.",
+            "Siber Gladyatör": "Sen derin deniz arenalarında dövüşen, sert mizaçlı, savaşçı bir sazan askerin.",
             "Matrix Sefi": "Sen simülasyonun dışına çıkmış, her şeyi yeşil kodlar olarak gören hacker balıksın."
         }
         sys_prompt = f"{personas.get(agent_role, 'Bilge Sazan')} Yanıtını kesinlikle şu dilde ver: {target_lang}. Asla başka dil karıştırma."
@@ -495,7 +495,7 @@ if st.session_state.active_panel_tab == "plus":
                     u_acc = SazanBank.get_account(user)
                     if u_acc["coin"] >= val:
                         SazanBank.modify_coin(user, -int(val))
-                        p_inv["shares"][ticker] = p_inv["shares'].get(ticker, 0) + 1
+                        p_inv["shares"][ticker] = p_inv["shares"].get(ticker, 0) + 1
                         SazanInventory.save_inventory(user, p_inv)
                         st.success(f"{ticker} hissesi alındı!"); time.sleep(0.5); st.rerun()
             with cb2:
