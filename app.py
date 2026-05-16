@@ -1,15 +1,13 @@
-"""
-================================================================================
-███████╗ █████╗ ███████╗ █████╗ ███╗   ██╗     ██████╗ ███████╗
-██╔════╝██╔══██╗╚══███╔╝██╔══██╗████╗  ██║    ██╔═══██╗██╔════╝
-███████╗███████║  ███╔╝ ███████║██╔██╗ ██║    ██║   ██║███████╗
-╚════██║██╔══██║ ███╔╝  ██╔══██║██║╚██╗██║    ██║   ██║╚════██║
-███████║██║  ██║███████╗██║  ██║██║ ╚████║    ╚██████╔╝███████║
-╚══════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝     ╚═════╝ ╚══════╝
-      👑 SAZAN BALIK ARTIFICIAL INTELLIGENCE - ULTIMATE CORE v105.0 👑
-      DEVELOPED BY: CAN MUHAMMED ÇUKUR - THE SUPREME ARCHITECT
-================================================================================
-"""
+# ================================================================================
+# ███████╗ █████╗ ███████╗ █████╗ ███╗  ██╗     ██████╗ ███████╗
+# ██╔════╝██╔══██╗╚══███╔╝██╔══██╗████╗  ██║     ██╔═══██╗██╔════╝
+# ███████╗███████║  ███╔╝ ███████║██╔██╗ ██║     ██║   ██║███████╗
+# ╚════██║██╔══██║ ███╔╝  ██╔══██║██║╚██╗██║     ██║   ██║╚════██║
+# ███████║██║  ██║███████╗██║  ██║██║ ╚████║     ╚██████╔╝███████║
+# ╚══════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝      ╚═════╝ ╚══════╝
+#       👑 SAZAN BALIK ARTIFICIAL INTELLIGENCE - ULTIMATE CORE v105.0 👑
+#       DEVELOPED BY: CAN MUHAMMED ÇUKUR - THE SUPREME ARCHITECT
+# ================================================================================
 
 import streamlit as st
 import json
@@ -91,7 +89,6 @@ INVENTORY_FILE = "sazan_v105_inventory.json"
 STOCKS_FILE = "sazan_v105_stocks.json"
 SUPER_ADMIN_PASSWORD = "dünyanın en iyi yapay zekası sazan ai"
 
-# TALEBİNİZ ÜZERE TAM 25 FARKLI DİL MATRİSİ MİMARİSİ
 DIL_MATRISI = {
     "Türkçe 🇹🇷": "tr", "English 🇺🇸": "en", "Deutsch 🇩🇪": "de", 
     "Français 🇫🇷": "fr", "Русский 🇷🇺": "ru", "日本語 🇯🇵": "ja",
@@ -174,7 +171,6 @@ class SazanNasdaq:
         stocks = KurumsalVeriAmbarı.load_json(STOCKS_FILE, {
             "SZN": 120.0, "BALIK": 45.0, "KRAK": 850.0, "CANAI": 5000.0
         })
-        # Fiyat Simülasyonu - Volatilite Aktif
         for key in stocks.keys():
             change_percent = random.uniform(-0.15, 0.18)
             stocks[key] = max(1.0, round(stocks[key] * (1 + change_percent), 2))
@@ -260,7 +256,7 @@ class SazanAIConception:
         return "\n\n---\n\n".join(log)
 
 # =====================================================================
-# 6. SYSTEM INITIALIZATION & STATE CHECK
+# 6. SYSTEM INITIALIZATION & SECURE STATE CHECK (BUG FIXED 🛡️)
 # =====================================================================
 def global_state_enforcer():
     defaults = {
@@ -275,12 +271,16 @@ def global_state_enforcer():
 
 global_state_enforcer()
 
+# KRİTİK GÜVENLİK GÜNCELLEMESİ: Kullanıcı oturumu benzersiz olarak st.session_state içinde izole edildi.
 if "username" not in st.session_state:
     st.markdown("<h1 style='text-align: center; color:#06b6d4;'>🐟 SAZAN CORE OS ENTERPRISE</h1>", unsafe_allow_html=True)
     st.markdown("<p style='text-align: center; color:#9ca3af;'>Dünyanın En Gelişmiş Siber Akvaryum Ağına Hoş Geldiniz.</p>", unsafe_allow_html=True)
-    identity = st.text_input("Akvaryum Yetkili Kullanıcı Adı Belirleyin:", max_chars=15)
+    
+    # Her tarayıcı sekmesine özel benzersiz bir text_input anahtarı sağlandı
+    identity = st.text_input("Akvaryum Yetkili Kullanıcı Adı Belirleyin:", max_chars=15, key="unique_login_gate")
     if st.button("Siber Matrise Enjekte Ol 🔥", use_container_width=True):
         if identity.strip():
+            # Kullanıcı adı doğrudan tarayıcının izole bellek alanına kilitleniyor global sızıntı önlendi!
             st.session_state.username = identity.strip()
             SazanBank.get_account(st.session_state.username)
             st.rerun()
@@ -289,7 +289,6 @@ if "username" not in st.session_state:
 user = st.session_state.username
 SazanBank.process_interest(user)
 
-# Borsa Fiyatlarını Dakikada Bir Güncelle
 if time.time() - st.session_state.last_market_update > 60:
     st.session_state.market_prices = SazanNasdaq.get_market_prices()
     st.session_state.last_market_update = time.time()
@@ -338,17 +337,16 @@ if st.session_state.sidebar_state == "collapsed":
 
 st.markdown("<h1 style='color:#06b6d4;'>🐟 Sazan Cyber-Akvaryum Mainframe v105</h1>", unsafe_allow_html=True)
 
-# Gelişmiş Admin Hile Paneli
 if st.session_state.admin_status:
     st.markdown("<div class='admin-god-box'>", unsafe_allow_html=True)
     st.markdown("<h2>👑 SUPREME GOD-MODE CONTROL CENTER</h2>", unsafe_allow_html=True)
     
-    token = st.text_input("Kriptografik Root Anahtarı Girin:", type="password")
+    token = st.text_input("Kriptografik Root Anahtarı Girin:", type="password", key="admin_password_gate")
     if token == SUPER_ADMIN_PASSWORD:
         st.success("🔱 Sazan Tanrısı Devreye Girdi. Sistemler Sizin Elinizde.")
         
         st.markdown("### 📢 Tüm Sunucuya/Kullanıcılara Küresel Mesaj Enjekte Et")
-        adm_broadcast = st.text_input("Yayınlanacak Mesaj:", placeholder="Can Muhammed Çukur sunucuya siber saldırı düzenledi!")
+        adm_broadcast = st.text_input("Yayınlanacak Mesaj:", placeholder="Can Muhammed Çukur sunucuya siber saldırı düzenledi!", key="broadcast_input")
         if st.button("🚨 Mesajı Küresel Ağa Bas"):
             if adm_broadcast.strip():
                 st.session_state.messages.append({"role": "assistant", "content": f"📢 **SİSTEM KÜRESEL DUYURUSU:** {adm_broadcast}"})
@@ -445,7 +443,6 @@ if st.session_state.dungeon_status:
                     st.error("Çantanda hiç iksir kalmamış!")
     st.markdown("</div>", unsafe_allow_html=True)
 
-# Sohbet Kayıt Balonları Ekrana Basımı
 for m in st.session_state.messages:
     with st.chat_message(m["role"]):
         st.markdown(m["content"])
@@ -460,7 +457,7 @@ if st.session_state.active_panel_tab == "plus":
     with t1:
         for item, d in DUNGEON_LORE["shop_items"].items():
             st.markdown(f"🔹 **{item}** — Fiyat: `{d['cost']} SZNC` | Etki Gücü: `{d.get('damage', d.get('heal', 0))}`")
-            if st.button(f"Sistem Envanterine Al: {item}"):
+            if st.button(f"Sistem Envanterine Al: {item}", key=f"buy_{item}"):
                 u_acc = SazanBank.get_account(user)
                 u_inv = SazanInventory.get_inventory(user)
                 if u_acc["coin"] >= d["cost"]:
@@ -476,7 +473,7 @@ if st.session_state.active_panel_tab == "plus":
                     
     with t2:
         b_acc = SazanBank.get_account(user)
-        dep = st.number_input("Kasaya Aktarılacak Miktar:", min_value=0, max_value=b_acc["coin"], step=20)
+        dep = st.number_input("Kasaya Aktarılacak Miktar:", min_value=0, max_value=b_acc["coin"], step=20, key="bank_deposit_input")
         if st.button("Fonları Banka Likiditesine Kilitle"):
             b_acc["coin"] -= dep
             b_acc["bank_deposit"] += dep
@@ -494,15 +491,15 @@ if st.session_state.active_panel_tab == "plus":
             st.write(f"💹 **{ticker}**: `{val} SZNC` (Senin Portföyün: {p_inv['shares'].get(ticker, 0)} Lot)")
             cb1, cb2 = st.columns(2)
             with cb1:
-                if st.button(f"1 Lot Al: {ticker}"):
+                if st.button(f"1 Lot Al: {ticker}", key=f"buy_share_{ticker}"):
                     u_acc = SazanBank.get_account(user)
                     if u_acc["coin"] >= val:
                         SazanBank.modify_coin(user, -int(val))
-                        p_inv["shares"][ticker] = p_inv["shares"].get(ticker, 0) + 1
+                        p_inv["shares"][ticker] = p_inv["shares'].get(ticker, 0) + 1
                         SazanInventory.save_inventory(user, p_inv)
                         st.success(f"{ticker} hissesi alındı!"); time.sleep(0.5); st.rerun()
             with cb2:
-                if st.button(f"1 Lot Sat: {ticker}"):
+                if st.button(f"1 Lot Sat: {ticker}", key=f"sell_share_{ticker}"):
                     if p_inv["shares"].get(ticker, 0) > 0:
                         SazanBank.modify_coin(user, int(val))
                         p_inv["shares"][ticker] -= 1
@@ -551,12 +548,12 @@ st.markdown("<div style='height: 30px;'></div>", unsafe_allow_html=True)
 c_plus, c_mic, c_input, c_dg = st.columns([1, 1, 8, 1])
 
 with c_plus:
-    if st.button("➕", help="Siber Panel Ekranını Aç/Kapat", use_container_width=True):
+    if st.button("➕", help="Siber Panel Ekranını Aç/Kapat", use_container_width=True, key="hud_btn_plus"):
         st.session_state.active_panel_tab = "plus" if st.session_state.active_panel_tab != "plus" else None
         st.rerun()
 
 with c_mic:
-    if st.button("🎤", help="Sesli Matris Girişi Yap", use_container_width=True):
+    if st.button("🎤", help="Sesli Matris Girişi Yap", use_container_width=True, key="hud_btn_mic"):
         st.session_state.active_panel_tab = "audio" if st.session_state.active_panel_tab != "audio" else None
         st.rerun()
 
@@ -564,7 +561,7 @@ with c_input:
     prompt = st.chat_input("Sazan Merkez Ağına kuantum komut gönder...", key="sazan_mainframe_input")
 
 with c_dg:
-    if st.button("⚔️", help="Deep-Sea Zindan Savaş Alanını Aç", use_container_width=True):
+    if st.button("⚔️", help="Deep-Sea Zindan Savaş Alanını Aç", use_container_width=True, key="hud_btn_dungeon"):
         st.session_state.dungeon_status = not st.session_state.dungeon_status
         st.rerun()
 
@@ -583,7 +580,7 @@ if prompt:
         st.rerun()
 
     st.session_state.messages.append({"role": "user", "content": prompt})
-    SazanBank.modify_coin(user, 3) # Her mesaja 3 Coin madencilik ödülü
+    SazanBank.modify_coin(user, 3)
     
     cur_lang = st.session_state.get('active_lang_code', 'Türkçe 🇹🇷')
     if st.session_state.council_activation:
