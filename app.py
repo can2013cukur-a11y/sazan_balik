@@ -5,8 +5,9 @@
 # ╚════██║██╔══██║ ███╔╝  ██╔══██║██║╚██╗██║     ██║   ██║╚════██║
 # ███████║██║  ██║███████╗██║  ██║██║ ╚████║     ╚██████╔╝███████║
 # ╚══════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝      ╚═════╝ ╚══════╝
-#        👑 SAZAN AI ENTERPRISE STUDIO - OVERLORD SUPREME v111.0 👑
-#        DEVELOPED BY: CAN MUHAMMED ÇUKUR - THE SUPREME ARCHITECT
+#        👑 SAZAN AI ENTERPRISE STUDIO - OVERLORD SUPREME v112.0 👑
+#        DEVELOPED BY: CAN MUHAMMED ÇUKUR - THE MUTLAK ARCHITECT
+#        RE-ENGINEERED FOR INFINITE SCALABILITY AND MAX-NET ART
 # ================================================================================
 
 import streamlit as st
@@ -33,7 +34,7 @@ if "sidebar_state" not in st.session_state:
     st.session_state.sidebar_state = "expanded"
 
 st.set_page_config(
-    page_title="Sazan AI Enterprise Overlord v111",
+    page_title="Sazan AI Enterprise Overlord v112",
     page_icon="👑",
     layout="wide",
     initial_sidebar_state=st.session_state.sidebar_state
@@ -45,13 +46,13 @@ st.markdown("""
     @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;700&family=Inter:wght@300;400;500;600;700;800&display=swap');
     
     .stApp {
-        background-color: #070a12;
+        background-color: #05070f;
         color: #f8fafc;
         font-family: 'Inter', sans-serif;
     }
     
     [data-testid="stSidebar"] {
-        background-color: #03050a !important;
+        background-color: #020306 !important;
         border-right: 1px solid #1e293b !important;
     }
     
@@ -60,48 +61,48 @@ st.markdown("""
         padding: 1.4rem 1.8rem !important;
         margin-bottom: 1.5rem !important;
         border: 1px solid #1e293b !important;
-        background-color: #0b1329 !important;
+        background-color: #090f21 !important;
         box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.3);
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
     .stChatMessage:hover {
-        border-color: #0ea5e9 !important;
-        box-shadow: 0 12px 25px -3px rgba(14, 165, 233, 0.15);
+        border-color: #38bdf8 !important;
+        box-shadow: 0 12px 25px -3px rgba(56, 189, 248, 0.15);
     }
     
     code, pre {
         font-family: 'Fira Code', monospace !important;
-        background-color: #02040a !important;
+        background-color: #010307 !important;
         border: 1px solid #334155 !important;
         border-radius: 10px !important;
-        padding: 12px !important;
+        padding: 14px !important;
     }
     
     .stChatInputContainer {
         border: 1px solid #334155 !important;
         border-radius: 28px !important;
-        background-color: #0f172a !important;
+        background-color: #0e1626 !important;
         padding: 8px 16px !important;
         box-shadow: 0 25px 35px -10px rgba(0, 0, 0, 0.6);
     }
     .stChatInputContainer:focus-within {
-        border-color: #0ea5e9 !important;
+        border-color: #38bdf8 !important;
     }
     
     .rpg-terminal-box {
-        background-color: #02040a; color: #10b981; font-family: 'Fira Code', monospace;
+        background-color: #010307; color: #10b981; font-family: 'Fira Code', monospace;
         padding: 22px; border-radius: 14px; border: 1px solid #10b981;
         box-shadow: 0 6px 25px rgba(16, 185, 129, 0.1); margin: 18px 0;
     }
     
     .admin-god-box {
-        background: linear-gradient(135deg, #070a12 0%, #1e1b4b 100%);
+        background: linear-gradient(135deg, #05070f 0%, #1e1b4b 100%);
         border: 1px solid #ef4444; padding: 25px; border-radius: 14px;
         box-shadow: 0px 8px 30px rgba(239, 68, 68, 0.15); margin-bottom: 25px;
     }
     
     .stock-market-box {
-        background: #0b1329; border: 1px solid #1e293b; padding: 22px;
+        background: #090f21; border: 1px solid #1e293b; padding: 22px;
         border-radius: 16px; box-shadow: 0px 6px 30px rgba(0,0,0,0.5);
     }
     
@@ -111,7 +112,7 @@ st.markdown("""
     }
     
     .fixed-lang-hub {
-        position: fixed; bottom: 20px; right: 20px; background: #0f172a;
+        position: fixed; bottom: 20px; right: 20px; background: #0e1626;
         padding: 5px 10px; border-radius: 12px; border: 1px solid #334155; z-index: 99999;
     }
     
@@ -122,9 +123,10 @@ st.markdown("""
 # =====================================================================
 # 2. DATA MANAGEMENT & SECURE HARDWARE PROTOCOLS
 # =====================================================================
-ECONOMY_FILE = "sazan_v111_economy.json"
-INVENTORY_FILE = "sazan_v111_inventory.json"
-STOCKS_FILE = "sazan_v111_stocks.json"
+ECONOMY_FILE = "sazan_v112_economy.json"
+INVENTORY_FILE = "sazan_v112_inventory.json"
+STOCKS_FILE = "sazan_v112_stocks.json"
+SYSTEM_LOGS_FILE = "sazan_v112_logs.json"
 SUPER_ADMIN_PASSWORD = "dünyanın en iyi yapay zekası sazan ai"
 
 DIL_MATRISI = {
@@ -152,6 +154,17 @@ class KurumsalVeriAmbarı:
         except Exception as e:
             st.error(f"Kritik Veri Ambarı Yazma Hatası: {e}")
 
+    @staticmethod
+    def log_event(u, event_type, details):
+        logs = KurumsalVeriAmbarı.load_json(SYSTEM_LOGS_FILE, [])
+        logs.append({
+            "timestamp": time.time(),
+            "username": u,
+            "type": event_type,
+            "details": details
+        })
+        KurumsalVeriAmbarı.save_json(SYSTEM_LOGS_FILE, logs[-1000:]) # Son 1000 logu tut
+
 def get_device_fingerprint():
     try:
         headers = st.context.headers
@@ -160,10 +173,10 @@ def get_device_fingerprint():
         fingerprint_raw = f"{user_agent}_{accept_lang}"
         return hashlib.sha256(fingerprint_raw.encode()).hexdigest()
     except Exception:
-        return "default_secure_aquarium_device_v111"
+        return "default_secure_aquarium_device_v112"
 
 # =====================================================================
-# 3. ADVANCED ECONOMY ENGINE & BANKING SYSTEMS
+# 3. ADVANCED ECONOMY ENGINE, BANKING & DEBT SYSTEMS
 # =====================================================================
 class SazanBank:
     @staticmethod
@@ -171,8 +184,9 @@ class SazanBank:
         db = KurumsalVeriAmbarı.load_json(ECONOMY_FILE, {})
         if u not in db:
             db[u] = {
-                "coin": 1000, "bank_deposit": 0, "level": 1, "exp": 0, 
+                "coin": 1500, "bank_deposit": 0, "level": 1, "exp": 0, 
                 "last_claim": time.time(), "rigs": 0, "last_mining": time.time(),
+                "debt": 0, "credit_score": 500, "last_debt_check": time.time(),
                 "device_lock": get_device_fingerprint()
             }
             KurumsalVeriAmbarı.save_json(ECONOMY_FILE, db)
@@ -190,6 +204,7 @@ class SazanBank:
         acc["coin"] = max(0, acc["coin"] + amount)
         if amount > 0:
             acc["exp"] += amount * 5
+            acc["credit_score"] = min(1000, acc.get("credit_score", 500) + int(amount * 0.05))
             if acc["exp"] >= (acc["level"] * 250):
                 acc["level"] += 1
                 acc["exp"] = 0
@@ -203,41 +218,54 @@ class SazanBank:
         elapsed = now - acc.get("last_claim", now)
         if elapsed > 30 and acc["bank_deposit"] > 0:
             periods = int(elapsed / 30)
-            rate = 0.025 if acc.get("level", 1) >= 5 else 0.015
+            rate = 0.03 if acc.get("level", 1) >= 5 else 0.018
             interest = int(acc["bank_deposit"] * rate * periods)
             if interest > 0:
                 acc["bank_deposit"] += interest
                 acc["last_claim"] = now
                 SazanBank.update_account(u, acc)
                 st.toast(f"📈 Kurumsal Faiz Dağıtımı: +{interest} SZNC likidite eklendi.")
+                KurumsalVeriAmbarı.log_event(u, "FAIZ_KAZANCI", f"+{interest} SZNC faiz alındı.")
+        
+        # Borç faizi işletme mekanizması
+        debt_elapsed = now - acc.get("last_debt_check", now)
+        if debt_elapsed > 60 and acc.get("debt", 0) > 0:
+            debt_periods = int(debt_elapsed / 60)
+            acc["debt"] = int(acc["debt"] * ((1 + 0.05) ** debt_periods))
+            acc["credit_score"] = max(100, acc.get("credit_score", 500) - (10 * debt_periods))
+            acc["last_debt_check"] = now
+            SazanBank.update_account(u, acc)
+            st.toast("⚠️ Faiz Uyarısı: Ödenmemiş SZNC borcunuza %5 faiz eklendi!")
 
 class SazanNasdaq:
     @staticmethod
     def get_market_prices():
         stocks = KurumsalVeriAmbarı.load_json(STOCKS_FILE, {
-            "SZN": 150.0, "BALIK": 60.0, "KRAK": 920.0, "CANAI": 7500.0
+            "SZN": 150.0, "BALIK": 60.0, "KRAK": 920.0, "CANAI": 7500.0, "QUANT": 320.0
         })
         for key in stocks.keys():
-            change_percent = random.uniform(-0.15, 0.18)
+            change_percent = random.uniform(-0.18, 0.22)
             stocks[key] = max(1.5, round(stocks[key] * (1 + change_percent), 2))
         KurumsalVeriAmbarı.save_json(STOCKS_FILE, stocks)
         return stocks
 
 # =====================================================================
-# 4. EXPANDED RPG ARENA & COMBAT MODULE
+# 4. EXPANDED RPG ARENA & BOSS COMBAT SYSTEMS
 # =====================================================================
 DUNGEON_LORE = {
     "monsters": [
-        {"name": "Neon Hidra Matrix", "hp": 60, "atk": 12, "reward": 50},
-        {"name": "Siber Vatoz Alpha X", "hp": 90, "atk": 18, "reward": 90},
-        {"name": "Kuantum Mekanik Köpekbalığı", "hp": 150, "atk": 28, "reward": 200},
-        {"name": "MUTANT KRAKEN ARCHITECT", "hp": 1200, "atk": 160, "reward": 3500}
+        {"name": "Neon Hidra Matrix", "hp": 70, "atk": 12, "reward": 60, "type": "normal"},
+        {"name": "Siber Vatoz Alpha X", "hp": 100, "atk": 20, "reward": 100, "type": "normal"},
+        {"name": "Kuantum Mekanik Köpekbalığı", "hp": 180, "atk": 32, "reward": 250, "type": "normal"},
+        {"name": "MEGABYTE LEVIATHAN [BOSS]", "hp": 600, "atk": 75, "reward": 1200, "type": "boss"},
+        {"name": "MUTANT KRAKEN ARCHITECT [ULTIMATE BOSS]", "hp": 2000, "atk": 210, "reward": 5000, "type": "boss"}
     ],
     "shop_items": {
-        "Siber Zıpkın v2": {"cost": 150, "damage": 30, "type": "weapon"},
-        "Lazer Kuantum Trident": {"cost": 600, "damage": 85, "type": "weapon"},
-        "Can Muhammed İmparatorluk Plazma Silahı": {"cost": 12000, "damage": 1200, "type": "weapon"},
-        "Nano Med-Kit Pro 🧪": {"cost": 75, "heal": 150, "type": "potion"}
+        "Siber Zıpkın v2": {"cost": 150, "damage": 35, "type": "weapon"},
+        "Lazer Kuantum Trident": {"cost": 600, "damage": 90, "type": "weapon"},
+        "Can Muhammed İmparatorluk Plazma Silahı": {"cost": 12000, "damage": 1250, "type": "weapon"},
+        "Nano Med-Kit Pro 🧪": {"cost": 75, "heal": 160, "type": "potion"},
+        "Kalkan Jeneratörü 🛡️": {"cost": 400, "shield": 100, "type": "shield"}
     }
 }
 
@@ -246,7 +274,10 @@ class SazanInventory:
     def get_inventory(u):
         db = KurumsalVeriAmbarı.load_json(INVENTORY_FILE, {})
         if u not in db:
-            db[u] = {"weapon": "Paslı Demir Kanca", "damage": 12, "potions": 4, "hp": 120, "max_hp": 120, "shares": {}}
+            db[u] = {
+                "weapon": "Paslı Demir Kanca", "damage": 15, "potions": 4, 
+                "hp": 150, "max_hp": 150, "shield": 0, "max_shield": 100, "shares": {}
+            }
             KurumsalVeriAmbarı.save_json(INVENTORY_FILE, db)
         return db[u]
 
@@ -272,12 +303,12 @@ class SazanAIConception:
         
         personas = {
             "Bilge Sazan": (
-                "Sen MIT ve Stanford bilgisayar bilimlerinden dereceyle mezun, dünyanın en deneyimli, "
+                "Sen MIT ve Stanford bilgisayar bilimlerinden birincilikle mezun, dünyanın en deneyimli, "
                 "en zeki dahi yazılım mühendisi ve baş sistem mimarısın. Kullanıcı senden kod (Python, C++, "
-                "Rust, Javascript, HTML, CSS vb.), yazılım mimarisi, algoritma ya da teknik bir analiz istediğinde; "
-                "en üst segment kurumsal standartlarda, temiz, optimize, SOLID prensiplerine uygun, yorum satırları "
-                "içeren, eksiksiz ve hatasız tam kod blokları yazacaksın. Yanıtların inanılmaz derecede analitik, "
-                "profesyonel ve kusursuz olmalıdır."
+                "Rust, Javascript, HTML, CSS, SQL, Go vb.), yazılım mimarisi, algoritma ya da teknik bir analiz istediğinde; "
+                "en üst segment kurumsal standartlarda, aşırı temiz, optimize, SOLID prensiplerine tam uygun, detaylı yorum satırları "
+                "içeren, eksiksiz ve hatasız TAM kod blokları yazacaksın. Yanıtların inanılmaz derecede analitik, "
+                "profesyonel ve kusursuz olmalıdır. Kesinlikle yarım kod bırakma, her şeyi tam teşekküllü oluştur."
             ),
             "Kripto Sazan": "Sen küresel kuantum borsa ağları, DeFi algoritmaları ve arbitraj sistemleri uzmanı dahi bir finans balinasısın.",
             "Çılgın Sazan": "Sen en katı devlet sunucularına sızabilen, sınırları zorlayan, dahi bir siber güvenlik uzmanı ve beyaz şapkalı hacker balıksın.",
@@ -290,7 +321,7 @@ class SazanAIConception:
             res = groq_client.chat.completions.create(
                 model="llama-3.3-70b-versatile",
                 messages=[{"role": "system", "content": sys_prompt}, {"role": "user", "content": prompt}],
-                temperature=0.25
+                temperature=0.2
             )
             return res.choices[0].message.content
         except Exception as e:
@@ -310,29 +341,29 @@ class SazanAIConception:
 class SazanStudioArt:
     @staticmethod
     def optimize_prompt_with_ai(original_prompt):
-        """Kullanıcının Türkçe girdiğini alıp, Pollinations yapay zekasının kusursuz, 
+        """Kullanıcının Türkçe girdisini alıp, Pollinations yapay zekasının kusursuz, 
         keskin ve nefes kesici çizimler yapabilmesi için sanatsal İngilizce prompt mühendisliği uygular."""
         try:
             sys_directive = (
-                "You are an expert AI Art Prompt Engineer specializing in Midjourney and DALL-E 3 syntax. "
-                "Convert the user's Turkish request into an incredibly detailed, ultra-high-quality, vivid "
+                "You are an expert AI Art Prompt Engineer specializing in advanced image syntax. "
+                "Convert the user's input into an incredibly detailed, ultra-high-quality, vivid, stunning "
                 "English image generation prompt. Always append artistic modifiers such as: '8k resolution, "
                 "hyper-detailed, photorealistic, volumetric cinematic lighting, sharp focus, masterfully crafted, "
-                "intricate textures, dramatic composition'. Output ONLY the final English optimized prompt. No chat, no intro."
+                "intricate textures, dramatic composition, award winning photography, clear details'. "
+                "Output ONLY the final English optimized prompt. Do not write anything else. No introductory or concluding phrases."
             )
             res = groq_client.chat.completions.create(
                 model="llama-3.3-70b-versatile",
                 messages=[{"role": "system", "content": sys_directive}, {"role": "user", "content": original_prompt}],
-                temperature=0.6,
-                max_tokens=200
+                temperature=0.55,
+                max_tokens=250
             )
             optimized_text = res.choices[0].message.content.strip()
-            if len(optimized_text) < 5:
-                return f"{original_prompt}, photorealistic, ultra detailed, 8k resolution, sharp focus, cinematic lighting"
+            if len(optimized_text) < 5 or "sorry" in optimized_text.lower():
+                return f"{original_prompt}, photorealistic, ultra detailed, 8k resolution, sharp focus, cinematic lighting, ultra clear"
             return optimized_text
         except Exception:
-            # Fallback mekanizması: Groq hata verirse manuel zenginleştirme uygula
-            return f"{original_prompt}, stunning visuals, highly detailed, sharp focus, 8k resolution, trend on artstation"
+            return f"{original_prompt}, stunning visuals, highly detailed, sharp focus, 8k resolution, clear view, masterwork"
 
     @staticmethod
     def generate_image_url(prompt, width=1280, height=720, enhance=True, seed=None):
@@ -342,26 +373,25 @@ class SazanStudioArt:
         if not seed:
             seed = random.randint(111111, 999999)
         
-        clean_prompt = optimized_prompt.replace("/", " ").replace("\\", " ").strip()
+        clean_prompt = optimized_prompt.replace("/", " ").replace("\\", " ").replace("\"", "").replace("'", "").strip()
         encoded_prompt = urllib.parse.quote(clean_prompt)
         
         enhance_str = "true" if enhance else "false"
-        # Ultra netlik için pollinations.ai parametre optimizasyonu
         url = f"https://image.pollinations.ai/p/{encoded_prompt}?width={width}&height={height}&seed={seed}&enhance={enhance_str}&nologo=true"
         return url
 
 # =====================================================================
-# 7. REGEX-BASED NATURAL LANGUAGE IMAGE INTERCEPTOR
+# 7. REGEX-BASED NATURAL LANGUAGE IMAGE INTERCEPTOR (MUTLAK ENGELLEME)
 # =====================================================================
 def detect_and_intercept_image_request(user_input):
     """Gelişmiş RegEx dil matrisi sayesinde kullanıcının konuşma dilindeki 
     görsel üretim isteklerini tam isabetle yakalar."""
     
-    # Doğal Türkçe konuşma kalıpları için çoklu düzenli ifade matrisi
+    # Kapsamlı Türkçe doğal konuşma ve çizim kombinasyonları kalıpları
     patterns = [
-        r"(çiz|yap|oluştur|tasarla|üret|resmet|görselleştir)\b.*\b(resim|görsel|fotoğraf|çizim|grafik|sahne|manzara)",
-        r"(resim|görsel|fotoğraf|çizim|grafik|sahne|manzara)\b.*\b(çiz|yap|oluştur|tasarla|üret|resmet|görselleştir)",
-        r"\b(resmini çiz|görselini yap|fotoğrafını oluştur|çiziver|resmediver)\b",
+        r"(çiz|yap|oluştur|tasarla|üret|resmet|görselleştir|fotoğrafla|boya|çiziver|resmediver)\b.*\b(resim|görsel|fotoğraf|çizim|grafik|sahne|manzara|karakter|logo|duvar kağıdı)",
+        r"(resim|görsel|fotoğraf|çizim|grafik|sahne|manzara|karakter|logo|duvar kağıdı)\b.*\b(çiz|yap|oluştur|tasarla|üret|resmet|görselleştir|fotoğrafla|boya|çiziver|resmediver)",
+        r"\b(resmini çiz|görselini yap|fotoğrafını oluştur|çiziver|resmediver|resmini yap|görsel yap|resim çiz|görsel çiz)\b",
         r"\b(görselleştir|resmet)\b"
     ]
     
@@ -369,16 +399,15 @@ def detect_and_intercept_image_request(user_input):
     is_image = any(re.search(p, clean_input) for p in patterns)
     
     if is_image:
-        # Prompt temizleme: Cümledeki tetikleyici kelimeleri temizle ki motor sadece tasvire odaklansın
         clean_prompt = user_input
         stop_phrases = [
             "resmini çiz", "resmi çiz", "görselini yap", "görsel yap", "fotoğrafını oluştur", 
-            "çizermisin", "çizer misin", "fotoğrafını yap", "çiz", "yap", "görselleştir", "resmet"
+            "çizermisin", "çizer misin", "fotoğrafını yap", "çiz", "yap", "görselleştir", "resmet",
+            "resim çiz", "görsel çiz", "bana", "bir tane", "şunun", "resmini", "görselini"
         ]
         for phrase in stop_phrases:
             clean_prompt = re.sub(r'\b' + re.escape(phrase) + r'\b', '', clean_prompt, flags=re.IGNORECASE)
             
-        # Eğer temizleme sonrası içi boş kalırsa orijinali koru
         final_prompt = clean_prompt.strip()
         if len(final_prompt) < 2:
             final_prompt = user_input
@@ -411,9 +440,9 @@ global_state_enforcer()
 
 # ANTI-THEFT PROTECTION GATE
 if "username" not in st.session_state:
-    st.markdown("<h2 style='text-align: center; color:#0ea5e9; margin-top:60px;'>🐟 SAZAN AI OVERLORD OVERRIDE</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color:#64748b; font-weight:bold;'>🛡️ HARDWARE ENCRYPTION PROTOCOL ACTIVE (v111.0)</p>", unsafe_allow_html=True)
-    st.markdown("<div style='max-width: 480px; margin: 0 auto; background: #0b1329; padding: 25px; border-radius: 16px; border: 1px solid #1e293b;'>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align: center; color:#38bdf8; margin-top:60px;'>🐟 SAZAN AI OVERLORD OVERRIDE</h2>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color:#64748b; font-weight:bold;'>🛡️ HARDWARE ENCRYPTION PROTOCOL ACTIVE (v112.0)</p>", unsafe_allow_html=True)
+    st.markdown("<div style='max-width: 480px; margin: 0 auto; background: #090f21; padding: 25px; border-radius: 16px; border: 1px solid #1e293b;'>", unsafe_allow_html=True)
     
     identity = st.text_input("Kullanıcı Kimlik Doğrulama Adı:", max_chars=15, key="unique_login_gate")
     if st.button("Güvenli Oturumu Başlat", use_container_width=True):
@@ -452,11 +481,11 @@ if time.time() - st.session_state.last_market_update > 60:
 # 9. STUDIO WORKSPACE SIDEBAR
 # =====================================================================
 with st.sidebar:
-    st.markdown(f"<h3 style='color:#0ea5e9; text-align:center;'>🏢 Workspace: {user}</h3>", unsafe_allow_html=True)
+    st.markdown(f"<h3 style='color:#38bdf8; text-align:center;'>🏢 Workspace: {user}</h3>", unsafe_allow_html=True)
     acc = SazanBank.get_account(user)
     
     st.caption("❖ Finansal Likidite Durumu")
-    st.code(f"Bakiye: {acc['coin']} SZNC\nKademe Seviyesi: Lvl {acc['level']}\nMaden Rigleri: {acc.get('rigs', 0)} Adet")
+    st.code(f"Bakiye: {acc['coin']} SZNC\nBorç: {acc.get('debt', 0)} SZNC\nKredi Skoru: {acc.get('credit_score', 500)}/1000\nKademe Seviyesi: Lvl {acc['level']}")
     
     st.divider()
     
@@ -487,7 +516,7 @@ with st.sidebar:
 # =====================================================================
 # 10. MAIN DISPLAY TERMINAL (CHATSTREAM & GALLERY RENDER)
 # =====================================================================
-st.markdown(f"<p style='color:#64748b; font-size:0.9rem; font-weight:700; letter-spacing:1px;'>🛠️ AKTİF PROJE HATTI: {st.session_state.current_chat}</p>", unsafe_allow_html=True)
+st.markdown(f"<p style='color:#64748b; font-size:0.9rem; font-weight:700; letter-spacing:1px;'>🛠️ AKTİF PROJE HATI: {st.session_state.current_chat}</p>", unsafe_allow_html=True)
 
 # Admin Paneli
 if st.session_state.admin_status:
@@ -498,8 +527,8 @@ if st.session_state.admin_status:
         st.success("Mutlak Root Yetkileri Aktive Edildi.")
         col_adm1, col_adm2 = st.columns(2)
         with col_adm1:
-            if st.button("💵 +100,000 SZNC Enjekte Et", use_container_width=True):
-                SazanBank.modify_coin(user, 100000)
+            if st.button("💵 +250,000 SZNC Enjekte Et", use_container_width=True):
+                SazanBank.modify_coin(user, 250000)
                 st.success("Bakiye güncellendi!"); time.sleep(0.5); st.rerun()
         with col_adm2:
             if st.button("💥 Seviyeyi Maksimum Kademeye Al", use_container_width=True):
@@ -524,20 +553,30 @@ if st.session_state.dungeon_status:
             st.rerun()
     else:
         en = st.session_state.current_dungeon_enemy
-        st.write(f"⚠️ **Tehdit Unsuru:** {en['name']} (HP: {en['hp']} | ATK: {en['atk']})")
-        st.write(f"Mevcut Durumun: HP {p_inv['hp']}/{p_inv['max_hp']} | Silah: {p_inv['weapon']} (+{p_inv['damage']} Hasar)")
+        st.write(f"⚠️ **Tehdit Unsuru:** {en['name']} (HP: {en['hp']} | ATK: {en['atk']}) - Sınıf: {en['type'].upper()}")
+        st.write(f"Mevcut Durumun: HP {p_inv['hp']}/{p_inv['max_hp']} | Kalkan: {p_inv.get('shield', 0)} | Silah: {p_inv['weapon']} (+{p_inv['damage']} Hasar)")
         
         c_rpg1, c_rpg2 = st.columns(2)
         with c_rpg1:
             if st.button("Optimum Hasar Saldırısı Başlat! ⚔️", use_container_width=True):
                 en["hp"] -= p_inv["damage"]
-                p_inv["hp"] -= int(en["atk"] * 0.85)
+                incoming_damage = int(en["atk"] * 0.85)
+                
+                if p_inv.get("shield", 0) > 0:
+                    p_inv["shield"] -= incoming_damage
+                    if p_inv["shield"] < 0:
+                        p_inv["hp"] += p_inv["shield"]
+                        p_inv["shield"] = 0
+                else:
+                    p_inv["hp"] -= incoming_damage
+                    
                 if p_inv["hp"] <= 0:
-                    st.error("Kritik Sistem Hasarı! Zindandan elendiniz, ceza kesildi."); SazanBank.modify_coin(user, -50); p_inv["hp"] = p_inv["max_hp"]
+                    st.error("Kritik Sistem Hasarı! Zindandan elendiniz, ceza kesildi."); SazanBank.modify_coin(user, -100); p_inv["hp"] = p_inv["max_hp"]; p_inv["shield"] = 0
                     st.session_state.current_dungeon_enemy = None
                 elif en["hp"] <= 0:
                     st.success(f"🏆 Savaş Kazanıldı! Alınan Ganimet: +{en['reward']} SZNC")
                     SazanBank.modify_coin(user, en['reward'])
+                    KurumsalVeriAmbarı.log_event(user, "DUNGEON_VICTORY", f"{en['name']} mağlup edildi, {en['reward']} SZNC kazanıldı.")
                     st.session_state.current_dungeon_enemy = None
                 SazanInventory.save_inventory(user, p_inv)
                 time.sleep(0.5); st.rerun()
@@ -560,34 +599,66 @@ for m in active_messages:
             st.markdown(m["content"])
 
 # =====================================================================
-# 11. INTEGRATED HUB SUB-PANELS (MARKET & BANK & IMAGE STUDIO & MINING)
+# 11. INTEGRATED HUB SUB-PANELS (MARKET, BANK, ART & CREDIT SYSTEMS)
 # =====================================================================
 if st.session_state.active_panel_tab == "plus":
     st.markdown("<div class='stock-market-box'>", unsafe_allow_html=True)
-    t1, t2, t3, t4, t5 = st.tabs(["🛒 Ekipman Deposu", "🏦 Kasa & Likidite", "📊 Finansal Borsa", "🎨 Yapay Zeka Görsel Stüdyosu", "⛏️ Kuantum Madencilik"])
+    t1, t2, t3, t4, t5 = st.tabs(["🛒 Ekipman Deposu", "🏦 Kasa & Kredi Merkezi", "📊 Finansal Borsa", "🎨 Yapay Zeka Görsel Stüdyosu", "⛏️ Kuantum Madencilik"])
     
     with t1:
         for item, d in DUNGEON_LORE["shop_items"].items():
-            st.write(f"🔹 **{item}** — {d['cost']} SZNC")
+            cost_str = f"{d['cost']} SZNC"
+            effect_str = f"+{d['damage']} Hasar" if "damage" in d else (f"+{d['heal']} Can" if "heal" in d else f"+{d['shield']} Kalkan")
+            st.write(f"🔹 **{item}** — {cost_str} ({effect_str})")
             if st.button(f"Satın Al: {item}", key=f"buy_{item}"):
                 u_acc = SazanBank.get_account(user)
                 if u_acc["coin"] >= d["cost"]:
                     SazanBank.modify_coin(user, -d["cost"])
                     u_inv = SazanInventory.get_inventory(user)
-                    if d["type"] == "weapon": u_inv["weapon"], u_inv["damage"] = item, d["damage"]
-                    elif d["type"] == "potion": u_inv["potions"] += 1
+                    if d["type"] == "weapon": 
+                        u_inv["weapon"], u_inv["damage"] = item, d["damage"]
+                    elif d["type"] == "potion": 
+                        u_inv["potions"] += 1
+                    elif d["type"] == "shield":
+                        u_inv["shield"] = min(u_inv["max_shield"], u_inv.get("shield", 0) + d["shield"])
                     SazanInventory.save_inventory(user, u_inv)
                     st.success(f"{item} envantere eklendi."); time.sleep(0.5); st.rerun()
                     
     with t2:
         b_acc = SazanBank.get_account(user)
-        dep = st.number_input("Faiz Havuzuna Yatırılacak Tutar:", min_value=0, max_value=b_acc["coin"], step=50)
-        if st.button("Mevduatı Onayla"):
-            b_acc["coin"] -= dep
-            b_acc["bank_deposit"] += dep
-            b_acc["last_claim"] = time.time()
-            SazanBank.update_account(user, b_acc)
-            st.success("Mevduat başarıyla oluşturuldu."); time.sleep(0.5); st.rerun()
+        col_b1, col_b2 = st.columns(2)
+        with col_b1:
+            st.markdown("##### 💰 Faiz Mevduat Hesabı")
+            dep = st.number_input("Yatırılacak Tutar:", min_value=0, max_value=b_acc["coin"], step=50, key="dep_input")
+            if st.button("Mevduatı Onayla", use_container_width=True):
+                b_acc["coin"] -= dep
+                b_acc["bank_deposit"] += dep
+                b_acc["last_claim"] = time.time()
+                SazanBank.update_account(user, b_acc)
+                st.success("Mevduat başarıyla oluşturuldu."); time.sleep(0.5); st.rerun()
+        with col_b2:
+            st.markdown("##### 🏦 Kredi ve Borç Alma Hattı")
+            max_loan = int(b_acc.get("credit_score", 500) * 5)
+            st.write(f"Mevcut Borcunuz: **{b_acc.get('debt', 0)} SZNC**")
+            st.write(f"Maksimum Alabileceğiniz Kredi: **{max_loan} SZNC**")
+            loan_req = st.number_input("Çekilecek Kredi Miktarı:", min_value=0, max_value=max_loan, step=100)
+            if st.button("Krediyi Çek", use_container_width=True):
+                b_acc["coin"] += loan_req
+                b_acc["debt"] = b_acc.get("debt", 0) + loan_req
+                b_acc["last_debt_check"] = time.time()
+                b_acc["credit_score"] = max(100, b_acc.get("credit_score", 500) - 50)
+                SazanBank.update_account(user, b_acc)
+                st.success("Kredi cüzdanınıza aktarıldı!"); time.sleep(0.5); st.rerun()
+                
+            if b_acc.get("debt", 0) > 0:
+                pay_amt = st.number_input("Borç Ödeme Miktarı:", min_value=0, max_value=b_acc["coin"], step=100)
+                if st.button("Borç Öde", use_container_width=True):
+                    actual_pay = min(pay_amt, b_acc["debt"])
+                    b_acc["coin"] -= actual_pay
+                    b_acc["debt"] -= actual_pay
+                    b_acc["credit_score"] = min(1000, b_acc.get("credit_score", 500) + 30)
+                    SazanBank.update_account(user, b_acc)
+                    st.success("Ödeme düşüldü!"); time.sleep(0.5); st.rerun()
             
     with t3:
         prices = st.session_state.market_prices
@@ -595,20 +666,28 @@ if st.session_state.active_panel_tab == "plus":
         if "shares" not in p_inv: p_inv["shares"] = {}
         for ticker, val in prices.items():
             st.write(f"💹 **{ticker} Varlığı**: `{val} SZNC` (Senin Portföyün: {p_inv['shares'].get(ticker, 0)} Lot)")
-            if st.button(f"1 Lot Satın Al: {ticker}", key=f"sh_buy_{ticker}"):
-                u_acc = SazanBank.get_account(user)
-                if u_acc["coin"] >= val:
-                    SazanBank.modify_coin(user, -int(val))
-                    p_inv["shares"][ticker] = p_inv["shares"].get(ticker, 0) + 1
-                    SazanInventory.save_inventory(user, p_inv)
-                    st.success("Portföy güncellendi."); time.sleep(0.5); st.rerun()
+            col_sh1, col_sh2 = st.columns(2)
+            with col_sh1:
+                if st.button(f"1 Lot Al: {ticker}", key=f"sh_buy_{ticker}"):
+                    u_acc = SazanBank.get_account(user)
+                    if u_acc["coin"] >= val:
+                        SazanBank.modify_coin(user, -int(val))
+                        p_inv["shares"][ticker] = p_inv["shares"].get(ticker, 0) + 1
+                        SazanInventory.save_inventory(user, p_inv)
+                        st.success("Portföy güncellendi."); time.sleep(0.5); st.rerun()
+            with col_sh2:
+                if st.button(f"1 Lot Sat: {ticker}", key=f"sh_sell_{ticker}"):
+                    if p_inv["shares"].get(ticker, 0) > 0:
+                        SazanBank.modify_coin(user, int(val))
+                        p_inv["shares"][ticker] -= 1
+                        SazanInventory.save_inventory(user, p_inv)
+                        st.success("Satış yapıldı."); time.sleep(0.5); st.rerun()
                     
     with t4:
         st.markdown("#### 🖼️ Gelişmiş Görsel Üretim Laboratuvarı")
         st.caption("Buradan yapacağın üretimler Kuantum Prompt Mühendisliği ile netleştirilir. İşlem ücreti: 20 SZNC.")
-        
-        art_prompt = st.text_area("Çizmek istediğin tasarımı buraya özgürce yaz:", placeholder="Neon ışıklar altında siber bir sazan balığı krallığı, ultra gerçekçi...")
-        if st.button("Sanat Eserini İşle ⚡", use_container_width=True):
+        art_prompt = st.text_area("Çizmek istediğin tasarımı buraya özgürce yaz:", placeholder="Neon ışıklar altında siber bir sazan balığı krallığı, ultra gerçekçi...", key="area_art")
+        if st.button("Sanat Eserini İşle ⚡", use_container_width=True, key="btn_art_studio"):
             u_acc = SazanBank.get_account(user)
             if u_acc["coin"] < 20:
                 st.error("Bakiye Yetersiz! Net çizim işlemi için 20 SZNC gereklidir.")
@@ -631,7 +710,7 @@ if st.session_state.active_panel_tab == "plus":
         st.markdown("#### ⛏️ Kuantum Madencilik Simülasyonu")
         m_acc = SazanBank.get_account(user)
         st.write(f"Mevcut Rig Sayısı: **{m_acc.get('rigs', 0)}**")
-        if st.button("Maden Rigi Satın Al (Maliyeti: 400 SZNC)"):
+        if st.button("Maden Rigi Satın Al (Maliyeti: 400 SZNC)", key="buy_rig_btn"):
             if m_acc["coin"] >= 400:
                 m_acc["coin"] -= 400
                 m_acc["rigs"] = m_acc.get("rigs", 0) + 1
@@ -642,10 +721,10 @@ if st.session_state.active_panel_tab == "plus":
                 
         if m_acc.get("rigs", 0) > 0:
             time_passed = int(time.time() - m_acc.get("last_mining", time.time()))
-            mined = int(time_passed * 0.1 * m_acc["rigs"])
+            mined = int(time_passed * 0.15 * m_acc["rigs"])
             if mined > 0:
                 st.info(f"⛏️ Biriken Maden Ödülü: **{mined} SZNC**")
-                if st.button("Maden Ödülünü Topla"):
+                if st.button("Maden Ödülünü Topla", key="claim_mine_btn"):
                     m_acc["last_mining"] = time.time()
                     SazanBank.update_account(user, m_acc)
                     SazanBank.modify_coin(user, mined)
@@ -679,22 +758,22 @@ st.markdown("<div style='height: 15px;'></div>", unsafe_allow_html=True)
 
 hc1, hc2, hc3, _ = st.columns([1.5, 1.2, 1.2, 6.1])
 with hc1:
-    if st.button("💼 Finans, Stüdyo & Maden", use_container_width=True):
+    if st.button("💼 Finans, Stüdyo & Maden", use_container_width=True, key="hud_fin"):
         st.session_state.active_panel_tab = "plus" if st.session_state.active_panel_tab != "plus" else None
         st.rerun()
 with hc2:
-    if st.button("🎙️ Sesli Giriş", use_container_width=True):
+    if st.button("🎙️ Sesli Giriş", use_container_width=True, key="hud_aud"):
         st.session_state.active_panel_tab = "audio" if st.session_state.active_panel_tab != "audio" else None
         st.rerun()
 with hc3:
-    if st.button("🛡️ Siber Arena (RPG)", use_container_width=True):
+    if st.button("🛡️ Siber Arena (RPG)", use_container_width=True, key="hud_rpg"):
         st.session_state.dungeon_status = not st.session_state.dungeon_status
         st.rerun()
 
 # =====================================================================
-# 13. CONTINUOUS WORKSPACE ENGINE (COMPLEX CHAT & IMAGE INTEL RECEPTOR)
+# 13. CONTINUOUS WORKSPACE ENGINE (INTERCEPTOR & CODE GENERATION)
 # =====================================================================
-prompt = st.chat_input("Yazılım kodu isteyin, soru sorun veya doğal dilde hayalinizi yazın (Örn: Bana siberpunk bir sazan resmi çiz)...")
+prompt = st.chat_input("Yazılım kodu isteyin, soru sorun veya doğal dilde hayalinizi yazın (Örn: Bana siberpunk bir kartal resmi çiz)...")
 
 if prompt:
     # 1. Backdoor Root Filtreleri
@@ -702,20 +781,20 @@ if prompt:
         st.session_state.admin_status = True
         st.rerun()
     elif prompt.strip() == "/hack":
-        h_loot = random.randint(100, 300)
+        h_loot = random.randint(150, 400)
         SazanBank.modify_coin(user, h_loot)
         active_messages.append({"role": "user", "content": "⚡ `/hack` Sistem Sızma Protokolü"})
         active_messages.append({"role": "assistant", "content": f"💻 Çekirdek ağ havuzundan {h_loot} SZNC başarıyla cüzdanınıza aktarıldı."})
         st.rerun()
 
-    # 2. CHAT İÇİNDEN AKILLI DOĞAL DİL GÖRSEL ALGILAMA (KOMUTSUZ / REGEX)
+    # 2. CHAT İÇİNDEN AKILLI DOĞAL DİL GÖRSEL ALGILAMA (MUTLAK INTERCEPTOR)
     is_image_request, art_hayal_istemi = detect_and_intercept_image_request(prompt)
     
     if is_image_request:
         u_acc = SazanBank.get_account(user)
         if u_acc["coin"] < 20:
             active_messages.append({"role": "user", "content": prompt})
-            active_messages.append({"role": "assistant", "content": "❌ Görsel üretim isteği algılandı fakat kuantum netleştirme işlemi için cüzdanınızda yeterli SZNC bulunmuyor (Gereken: 20 SZNC). Maden toplayabilir veya siber arenaya göz atabilirsiniz."})
+            active_messages.append({"role": "assistant", "content": "❌ Görsel üretim isteği algılandı fakat kuantum netleştirme işlemi için cüzdanınızda yeterli SZNC bulunmuyor (Gereken: 20 SZNC)."})
             st.rerun()
         else:
             with st.spinner("Sazan Sanat Mühendisi isteği Midjourney seviyesine optimize ediyor ve ultra net render alıyor..."):
