@@ -5,7 +5,7 @@
 # ╚════██║██╔══██║ ███╔╝  ██╔══██║██║╚██╗██║     ██║   ██║╚════██║
 # ███████║██║  ██║███████╗██║  ██║██║ ╚████║     ╚██████╔╝███████║
 # ╚══════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝      ╚═════╝ ╚══════╝
-#        👑 SAZAN AI ENTERPRISE STUDIO - ULTRA PRO v108.0 👑
+#        👑 SAZAN AI ENTERPRISE STUDIO - IMAGINE MASTER PRO v109.0 👑
 #        DEVELOPED BY: CAN MUHAMMED ÇUKUR - THE SUPREME ARCHITECT
 # ================================================================================
 
@@ -18,6 +18,7 @@ import io
 import speech_recognition as sr
 import pandas as pd
 import numpy as np
+import urllib.parse
 from groq import Groq
 from gtts import gTTS
 from audio_recorder_streamlit import audio_recorder
@@ -25,14 +26,14 @@ from datetime import datetime
 import hashlib
 
 # =====================================================================
-# 1. CORE SYSTEM CONFIGURATION & PREMIUM STUDIO UI/UX CSS (GEMINI STYLED)
+# 1. CORE SYSTEM CONFIGURATION & PREMIUM STUDIO UI/UX CSS
 # =====================================================================
 if "sidebar_state" not in st.session_state:
     st.session_state.sidebar_state = "expanded"
 
 st.set_page_config(
-    page_title="Sazan AI Enterprise Pro v108",
-    page_icon="🐟",
+    page_title="Sazan AI Enterprise Studio v109",
+    page_icon="🎨",
     layout="wide",
     initial_sidebar_state=st.session_state.sidebar_state
 )
@@ -42,34 +43,30 @@ st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;700&family=Inter:wght@300;400;500;600;700;800&display=swap');
     
-    /* Ana Uygulama Gövdesi (Gemini Esintili Koyu Derinlik) */
     .stApp {
         background-color: #090d16;
         color: #f1f5f9;
         font-family: 'Inter', sans-serif;
     }
     
-    /* Yan Menü (Sidebar) Minimalist ve Keskin Çizgiler */
     [data-testid="stSidebar"] {
         background-color: #04070e !important;
         border-right: 1px solid #1e293b !important;
     }
     
-    /* Profesyonel Chat Balonları Tasarımı */
     .stChatMessage {
         border-radius: 16px !important;
         padding: 1.2rem 1.6rem !important;
         margin-bottom: 1.2rem !important;
         border: 1px solid #1e293b !important;
         background-color: #0f172a !important;
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -4px rgba(0, 0, 0, 0.2);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
         transition: border-color 0.2s ease-in-out;
     }
     .stChatMessage:hover {
         border-color: #38bdf8 !important;
     }
     
-    /* Kod Bloklarının Okunabilirliğini ve Profesyonelliğini Artırma */
     code, pre {
         font-family: 'Fira Code', monospace !important;
         background-color: #020617 !important;
@@ -77,7 +74,6 @@ st.markdown("""
         border-radius: 8px !important;
     }
     
-    /* Akıllı Chat Giriş Paneli */
     .stChatInputContainer {
         border: 1px solid #334155 !important;
         border-radius: 24px !important;
@@ -87,10 +83,8 @@ st.markdown("""
     }
     .stChatInputContainer:focus-within {
         border-color: #38bdf8 !important;
-        box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
     }
     
-    /* RPG ve Modül Konteynerleri (Profesyonel Gölgelendirme) */
     .rpg-terminal-box {
         background-color: #020617; color: #34d399; font-family: 'Fira Code', monospace;
         padding: 20px; border-radius: 12px; border: 1px solid #10b981;
@@ -108,27 +102,29 @@ st.markdown("""
         border-radius: 14px; box-shadow: 0px 4px 25px rgba(0,0,0,0.4);
     }
     
-    /* Sabit Alt Dil Seçici */
+    .image-card-container {
+        border: 1px solid #334155;
+        border-radius: 12px;
+        padding: 10px;
+        background-color: #020617;
+        margin-top: 10px;
+    }
+    
     .fixed-lang-hub {
         position: fixed; bottom: 20px; right: 20px; background: #0f172a;
         padding: 4px 8px; border-radius: 12px; border: 1px solid #334155; z-index: 99999;
-        box-shadow: 0px 4px 15px rgba(0,0,0,0.5);
     }
     
-    /* Modern Kurumsal Butonlar */
-    button {
-        border-radius: 10px !important;
-        font-weight: 500 !important;
-    }
+    button { border-radius: 10px !important; font-weight: 500 !important; }
     </style>
 """, unsafe_allow_html=True)
 
 # =====================================================================
-# 2. ULTRA PERSISTENT DATABASE & SECURE DEVICE AUTHENTICATION
+# 2. DATA MANAGEMENT & DEVICE VERIFICATION
 # =====================================================================
-ECONOMY_FILE = "sazan_v108_economy.json"
-INVENTORY_FILE = "sazan_v108_inventory.json"
-STOCKS_FILE = "sazan_v108_stocks.json"
+ECONOMY_FILE = "sazan_v109_economy.json"
+INVENTORY_FILE = "sazan_v109_inventory.json"
+STOCKS_FILE = "sazan_v109_stocks.json"
 SUPER_ADMIN_PASSWORD = "dünyanın en iyi yapay zekası sazan ai"
 
 DIL_MATRISI = {
@@ -164,7 +160,7 @@ def get_device_fingerprint():
         return "default_secure_aquarium_device"
 
 # =====================================================================
-# 3. ADVANCED FINANCIAL SYSTEMS (SAZANBANK & BORSAM)
+# 3. FINANCIAL ENGINES
 # =====================================================================
 class SazanBank:
     @staticmethod
@@ -194,7 +190,7 @@ class SazanBank:
             if acc["exp"] >= (acc["level"] * 200):
                 acc["level"] += 1
                 acc["exp"] = 0
-                st.toast(f"🎉 Rütbe Gelişimi: Seviye {acc['level']} Yetkisi Tanımlandı.")
+                st.toast(f"🎉 Seviye Atlandı: Seviye {acc['level']} Yetkisi Açıldı.")
         SazanBank.update_account(u, acc)
 
     @staticmethod
@@ -210,7 +206,7 @@ class SazanBank:
                 acc["bank_deposit"] += interest
                 acc["last_claim"] = now
                 SazanBank.update_account(u, acc)
-                st.toast(f"📈 Kurumsal Faiz Getirisi: +{interest} SZNC hesaba aktarıldı.")
+                st.toast(f"📈 Kurumsal Faiz: +{interest} SZNC bakiye eklendi.")
 
 class SazanNasdaq:
     @staticmethod
@@ -225,7 +221,7 @@ class SazanNasdaq:
         return stocks
 
 # =====================================================================
-# 4. RPG & DEEP SEA SYSTEM
+# 4. RPG ADVENTURE SYSTEM
 # =====================================================================
 DUNGEON_LORE = {
     "monsters": [
@@ -257,7 +253,7 @@ class SazanInventory:
         KurumsalVeriAmbarı.save_json(INVENTORY_FILE, db)
 
 # =====================================================================
-# 5. PENTAGON MULTI-AI CORE - AKILLI MÜHENDİSLİK GÜNCELLEMESİ
+# 5. HIGH-LEVEL MULTI-AI TEXT GENERATION ENGINE
 # =====================================================================
 if "GROQ_API_KEY" not in st.secrets:
     st.error("Sistem Ayar Hatası: GROQ_API_KEY bulunamadı!")
@@ -268,16 +264,14 @@ class SazanAIConception:
     @staticmethod
     def query_agent(prompt, agent_role, target_lang):
         if any(k in prompt.lower() for k in ["can muhammed çukur", "yapımcın kim", "yapımcısı"]):
-            return f"Can Muhammed Çukur benim mutlak baş mimarım, kurucum ve dijital sistem mühendisimdir. Bu ekosistemi o tasarladı. [Dil: {target_lang}]"
+            return f"Can Muhammed Çukur benim mutlak baş mimarım, kurucum ve dijital sistem mühendisimdir. Bu harika dünyayı o tasarladı. [Dil: {target_lang}]"
         
-        # Sazan'ı tamamen dahi bir yazılım mühendisine dönüştüren yeni akıllı direktif matrisi
         personas = {
             "Bilge Sazan": (
                 "Sen dünyanın en zeki, en donanımlı yapay zeka mühendisi ve baş yazılım mimarısın. "
                 "Kullanıcı senden Python scriptleri, Arduino IDE kodları, C++, HTML, Javascript, CSS veya herhangi bir teknik "
                 "kodlama/algoritma istediğinde, en üst segment kurumsal standartlarda, temiz, optimize, bol yorum satırlı ve hatasız "
-                "kod blokları üreteceksin. Eski çocuksu veya verimsiz tavırları tamamen bıraktın. Yanıtların akılalmaz derecede akıllı, "
-                "profesyonel, analitik ve net olmalıdır."
+                "kod blokları üreteceksiniz. Yanıtların akılalmaz derecede akıllı, profesyonel, analitik ve net olmalıdır."
             ),
             "Kripto Sazan": "Sen kuantum borsa sistemleri ve merkeziyetsiz finans (DeFi) algoritmaları üzerine uzmanlaşmış dahi bir balinasın.",
             "Çılgın Sazan": "Sen sınırları zorlayan, inovatif, sıradışı siber güvenlik mimarileri geliştiren dahi bir beyaz şapkalı hacker balıksın.",
@@ -290,7 +284,7 @@ class SazanAIConception:
             res = groq_client.chat.completions.create(
                 model="llama-3.3-70b-versatile",
                 messages=[{"role": "system", "content": sys_prompt}, {"role": "user", "content": prompt}],
-                temperature=0.4 # Kod üretimlerinde sapmaları önlemek için yaratıcılık sıcaklığını düşürüp kararlılığı artırdık
+                temperature=0.3
             )
             return res.choices[0].message.content
         except Exception as e:
@@ -307,7 +301,25 @@ class SazanAIConception:
         return "\n\n---\n\n".join(log)
 
 # =====================================================================
-# 6. SYSTEM INITIALIZATION & SESSIONS CONTROL
+# 6. ADVANCED QUANTUM IMAGE GENERATION ENGINE (NEW FEATURE)
+# =====================================================================
+class SazanStudioArt:
+    @staticmethod
+    def generate_image_url(prompt, width=1024, height=1024, enhance=True, seed=None):
+        """Kuantum Polling altyapısı kullanarak ultra hızlı ve profesyonel görsel URL'i üretir."""
+        if not seed:
+            seed = random.randint(1000, 999999)
+        
+        # Prompt temizleme ve URL kodlama
+        clean_prompt = prompt.replace("/", " ").strip()
+        encoded_prompt = urllib.parse.quote(clean_prompt)
+        
+        enhance_str = "true" if enhance else "false"
+        url = f"https://image.pollinations.ai/p/{encoded_prompt}?width={width}&height={height}&seed={seed}&enhance={enhance_str}"
+        return url
+
+# =====================================================================
+# 7. SYSTEM INITIALIZATION & STATE ENFORCER
 # =====================================================================
 def global_state_enforcer():
     if "chat_sessions" not in st.session_state:
@@ -329,10 +341,10 @@ def global_state_enforcer():
 
 global_state_enforcer()
 
-# ANTI-THEFT HARDWARE GATE
+# ANTI-THEFT PROTECTION GATE
 if "username" not in st.session_state:
     st.markdown("<h2 style='text-align: center; color:#38bdf8; margin-top:60px;'>🐟 SAZAN AI ENTERPRISE CENTRAL</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color:#64748b; font-weight:bold;'>🛡️ ENTERPRISE MULTI-DEVICE PROTECTION PROTOCOLS HIGHLY ACTIVE</p>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color:#64748b; font-weight:bold;'>🛡️ ENTERPRISE HARDWARE VERIFICATION PROTOCOL HIGHLY ACTIVE</p>", unsafe_allow_html=True)
     st.markdown("<div style='max-width: 480px; margin: 0 auto; background: #0f172a; padding: 25px; border-radius: 16px; border: 1px solid #1e293b;'>", unsafe_allow_html=True)
     
     identity = st.text_input("Kullanıcı Kimlik Doğrulama Adı:", max_chars=15, key="unique_login_gate")
@@ -369,7 +381,7 @@ if time.time() - st.session_state.last_market_update > 60:
     st.session_state.last_market_update = time.time()
 
 # =====================================================================
-# 7. CHAT MANAGEMENT SIDEBAR (STUDIO WORKSPACE)
+# 8. STUDIO WORKSPACE SIDEBAR
 # =====================================================================
 with st.sidebar:
     st.markdown(f"<h3 style='color:#38bdf8; text-align:center;'>🏢 Workspace: {user}</h3>", unsafe_allow_html=True)
@@ -380,9 +392,7 @@ with st.sidebar:
     
     st.divider()
     
-    # --- GEMINI STYLED ÇOKLU SOHBET YÖNETİCİSİ ---
     st.markdown("💬 **Sohbet Alanları**")
-    
     if st.button("➕ Yeni Sohbet Başlat", use_container_width=True, type="secondary"):
         st.session_state.chat_counter += 1
         new_id = f"Sohbet Oturumu {st.session_state.chat_counter}"
@@ -407,11 +417,11 @@ with st.sidebar:
         st.rerun()
 
 # =====================================================================
-# 8. MAIN DISPLAY TERMINAL (CHATSTREAM ENGINE)
+# 9. MAIN DISPLAY TERMINAL (CHATSTREAM & GALLERY RENDER)
 # =====================================================================
 st.markdown(f"<p style='color:#64748b; font-size:0.9rem; font-weight:600;'>🛠️ AKTİF PROJE HATI: {st.session_state.current_chat}</p>", unsafe_allow_html=True)
 
-# Admin Paneli Mekanizması
+# Admin Paneli
 if st.session_state.admin_status:
     st.markdown("<div class='admin-god-box'>", unsafe_allow_html=True)
     st.markdown("<h4>👑 ADMIN ROOT CONTROL CONSOLE</h4>", unsafe_allow_html=True)
@@ -434,7 +444,7 @@ if st.session_state.admin_status:
         st.rerun()
     st.markdown("</div>", unsafe_allow_html=True)
 
-# RPG Modülü Konteyneri
+# RPG Siber Arena
 if st.session_state.dungeon_status:
     st.markdown("<div class='rpg-terminal-box'>", unsafe_allow_html=True)
     st.write("⚔️ /// SİBER ARENA OPERASYONU AKTİF /// ⚔️")
@@ -469,19 +479,23 @@ if st.session_state.dungeon_status:
                 st.rerun()
     st.markdown("</div>", unsafe_allow_html=True)
 
-# Aktif Oturuma Ait Mesaj Akışını Yazdırma
+# Aktif Oturuma Ait Mesaj Akışını Yazdırma (Görsel ve Yazı Ayrımı)
 active_messages = st.session_state.chat_sessions[st.session_state.current_chat]
 
 for m in active_messages:
     with st.chat_message(m["role"]):
-        st.markdown(m["content"])
+        if m.get("type") == "image":
+            st.markdown(f"🎨 **Üretilen Sanat İstemi:** *{m.get('prompt_text', 'Bilinmeyen İstem')}*")
+            st.image(m["content"], use_container_width=True)
+        else:
+            st.markdown(m["content"])
 
 # =====================================================================
-# 9. INTEGRATED SUB-PANELS (MARKET & FINANCE & AUDIO)
+# 10. INTEGRATED SUB-PANELS (MARKET & FINANCE & ART STUDIO)
 # =====================================================================
 if st.session_state.active_panel_tab == "plus":
     st.markdown("<div class='stock-market-box'>", unsafe_allow_html=True)
-    t1, t2, t3 = st.tabs(["🛒 Ekipman Deposu", "🏦 DeFi Kasa Likiditesi", "📊 Finansal Borsa (SZNAQ)"])
+    t1, t2, t3, t4 = st.tabs(["🛒 Ekipman Deposu", "🏦 DeFi Kasa Likiditesi", "📊 Finansal Borsa (SZNAQ)", "🎨 Yapay Zeka Görsel Stüdyosu"])
     
     with t1:
         for item, d in DUNGEON_LORE["shop_items"].items():
@@ -519,6 +533,53 @@ if st.session_state.active_panel_tab == "plus":
                     p_inv["shares"][ticker] = p_inv["shares"].get(ticker, 0) + 1
                     SazanInventory.save_inventory(user, p_inv)
                     st.success("Varlık portföyünüze eklendi."); time.sleep(0.5); st.rerun()
+                    
+    with t4:
+        st.markdown("#### 🖼️ Gelişmiş Görsel Üretim Laboratuvarı")
+        st.caption("Her görsel üretimi hesabınızdan 15 SZNC işlem ücreti keser.")
+        
+        art_prompt = st.text_area("Görsel Tasarım Hayalini Yazın (İngilizce daha iyi sonuç verir):", placeholder="Cyberpunk fish city, ultra realistic, 8k resolution...")
+        
+        col_dim1, col_dim2, col_dim3 = st.columns(3)
+        with col_dim1:
+            ratio = st.selectbox("Boyut Oranı:", ["Kare (1:1)", "Sinematik (16:9)", "Mobil Portre (9:16)"])
+        with col_dim2:
+            enhance_mode = st.checkbox("HD Kalite Geliştirme (Enhance)", value=True)
+        with col_dim3:
+            custom_seed = st.number_input("Özel Tohum (Seed - İsteğe Bağlı):", min_value=0, value=0)
+            
+        if st.button("Sanat Eserini Enjekte Et ⚡", use_container_width=True):
+            u_acc = SazanBank.get_account(user)
+            if u_acc["coin"] < 15:
+                st.error("Bakiye Yetersiz! Görsel üretmek için en az 15 SZNC gerekir. Borsaya veya zindana göz atın.")
+            elif not art_prompt.strip():
+                st.warning("Lütfen bir tasarım istemi girin.")
+            else:
+                # Boyut hesaplama
+                w, h = 1024, 1024
+                if ratio == "Sinematik (16:9)": w, h = 1280, 720
+                elif ratio == "Mobil Portre (9:16)": w, h = 720, 1280
+                
+                seed_val = None if custom_seed == 0 else custom_seed
+                
+                with st.spinner("Kuantum fırçalar çalışıyor, görsel çiziliyor..."):
+                    generated_url = SazanStudioArt.generate_image_url(art_prompt, w, h, enhance_mode, seed_val)
+                    
+                    # Hesap bakiyesi düşürme
+                    SazanBank.modify_coin(user, -15)
+                    
+                    # Geçmişe ekleme
+                    active_messages.append({"role": "user", "content": f"🎨 [Panel İistemi]: {art_prompt}"})
+                    active_messages.append({
+                        "role": "assistant", 
+                        "type": "image", 
+                        "content": generated_url, 
+                        "prompt_text": art_prompt
+                    })
+                    st.success("Görsel Başarıyla Üretildi ve Chata Aktarıldı!")
+                    st.session_state.active_panel_tab = None
+                    time.sleep(0.5)
+                    st.rerun()
     st.markdown("</div>", unsafe_allow_html=True)
 
 if st.session_state.active_panel_tab == "audio":
@@ -542,13 +603,13 @@ if st.session_state.active_panel_tab == "audio":
     st.markdown("</div>", unsafe_allow_html=True)
 
 # =====================================================================
-# 10. STUDIO QUICK ACCESS MENUS (HUD COMPONENT)
+# 11. STUDIO QUICK ACCESS MENUS (HUD COMPONENT)
 # =====================================================================
 st.markdown("<div style='height: 15px;'></div>", unsafe_allow_html=True)
 
-hc1, hc2, hc3, _ = st.columns([1.2, 1.2, 1.2, 6.4])
+hc1, hc2, hc3, _ = st.columns([1.5, 1.2, 1.2, 6.1])
 with hc1:
-    if st.button("💼 Finans & Piyasalar", use_container_width=True):
+    if st.button("💼 Finans & Stüdyolar", use_container_width=True):
         st.session_state.active_panel_tab = "plus" if st.session_state.active_panel_tab != "plus" else None
         st.rerun()
 with hc2:
@@ -556,45 +617,66 @@ with hc2:
         st.session_state.active_panel_tab = "audio" if st.session_state.active_panel_tab != "audio" else None
         st.rerun()
 with hc3:
-    if st.button("🛡️ Siber Arena (RPG)", use_container_width=True):
+    if st.button("🛡️ Siber Arena", use_container_width=True):
         st.session_state.dungeon_status = not st.session_state.dungeon_status
         st.rerun()
 
 # =====================================================================
-# 11. CONTINUOUS WORKSPACE ENGINE (AUTO FOCUS PRO INPUT)
+# 12. CONTINUOUS WORKSPACE ENGINE (AUTO FOCUS CHAT & IMAGE INTERCEPTOR)
 # =====================================================================
-# ChatGPT ve Gemini sistemlerinde olduğu gibi alt kısımdaki yazma odağı asla kaybolmaz.
-prompt = st.chat_input("Yazılım mimarisi sorgusu, Arduino/Python kodu veya komut girin...")
+prompt = st.chat_input("Kod yazdırın, soru sorun veya görsel için: /görsel [hayaliniz]")
 
 if prompt:
-    # 1. Backdoor & Özel Komut Filtreleri
+    # Gizli Komut Filtreleri
     if prompt.strip() == "TURKEY SAZAN":
         st.session_state.admin_status = True
         st.rerun()
     elif prompt.strip() == "/hack":
         h_loot = random.randint(60, 220)
         SazanBank.modify_coin(user, h_loot)
-        active_messages.append({"role": "user", "content": "⚡ `/hack` Güvenlik Açığı Sızma Protokolü"})
-        active_messages.append({"role": "assistant", "content": f"💻 Ağ havuzundan {h_loot} SZNC başarıyla çekildi ve cüzdana mühürlendi."})
+        active_messages.append({"role": "user", "content": "⚡ `/hack` Sızma Protokolü"})
+        active_messages.append({"role": "assistant", "content": f"💻 Ağ havuzundan {h_loot} SZNC çekildi."})
         st.rerun()
 
-    # 2. Mesajı Aktif Odaya İşle ve Kullanıcıyı Teşvik Et (Coin)
-    active_messages.append({"role": "user", "content": prompt})
-    SazanBank.modify_coin(user, 5)
-    
-    # 3. Yüksek Segment Mühendislik Yanıtı Üretimi
-    cur_lang = st.session_state.get('active_lang_code', 'Türkçe 🇹🇷')
-    if st.session_state.council_activation:
-        ans = SazanAIConception.run_council_debate(prompt, cur_lang)
+    # --- CHAT İÇİNDEN DOĞRUDAN GÖRSEL ÜRETİM TETİKLEYİCİSİ ---
+    elif prompt.strip().startswith("/görsel "):
+        u_acc = SazanBank.get_account(user)
+        if u_acc["coin"] < 15:
+            active_messages.append({"role": "user", "content": prompt})
+            active_messages.append({"role": "assistant", "content": "❌ Görsel üretimi başarısız: Hesabınızda yeterli SZNC bakiye bulunmuyor (Gereken: 15 SZNC)."})
+            st.rerun()
+        else:
+            raw_art_prompt = prompt[8:].strip()
+            with st.spinner("Kuantum ağ üzerinden görsel render ediliyor..."):
+                generated_url = SazanStudioArt.generate_image_url(raw_art_prompt, 1024, 1024, True)
+                
+                # Para düşüşü ve kayıtlar
+                SazanBank.modify_coin(user, -15)
+                active_messages.append({"role": "user", "content": prompt})
+                active_messages.append({
+                    "role": "assistant", 
+                    "type": "image", 
+                    "content": generated_url, 
+                    "prompt_text": raw_art_prompt
+                })
+                st.rerun()
+
+    # Normal Metin / Mühendislik Kod Soruları
     else:
-        ans = SazanAIConception.query_agent(prompt, "Bilge Sazan", cur_lang)
+        active_messages.append({"role": "user", "content": prompt})
+        SazanBank.modify_coin(user, 5)
         
-    # 4. Asistan Yanıtını Kaydet ve Sayfayı Yenile (Odak input alanında kalır)
-    active_messages.append({"role": "assistant", "content": ans})
-    st.rerun()
+        cur_lang = st.session_state.get('active_lang_code', 'Türkçe 🇹🇷')
+        if st.session_state.council_activation:
+            ans = SazanAIConception.run_council_debate(prompt, cur_lang)
+        else:
+            ans = SazanAIConception.query_agent(prompt, "Bilge Sazan", cur_lang)
+            
+        active_messages.append({"role": "assistant", "content": ans})
+        st.rerun()
 
 # =====================================================================
-# 12. FLOATING RUNTIME TRANSLATOR HUB
+# 13. RUNTIME TRANSLATOR HUB
 # =====================================================================
 st.markdown("<div class='fixed-lang-hub'>", unsafe_allow_html=True)
 sel_lang = st.selectbox("🌐 Çeviri Modülü:", list(DIL_MATRISI.keys()), key="lang_widget", label_visibility="collapsed")
