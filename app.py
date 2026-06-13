@@ -5,9 +5,9 @@
 # ╚════██║██╔══██║ ███╔╝  ██╔══██║██║╚██╗██║     ██║   ██║╚════██║
 # ███████║██║  ██║███████╗██║  ██║██║ ╚████║     ╚██████╔╝███████║
 # ╚══════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝      ╚═════╝ ╚══════╝
-#        👑 SAZAN AI ENTERPRISE STUDIO - OVERLORD SUPREME v112.5 👑
+#        👑 SAZAN AI ENTERPRISE STUDIO - GAME ENGINE SUPREME v113.0 👑
 #        DEVELOPED BY: CAN MUHAMMED ÇUKUR - THE MUTLAK ARCHITECT
-#        PATCH NOTE: SYNTAX & INTERCEPTOR HOTFIX APPLIED
+#        PATCH NOTE: NO MORE IMAGES - QUANTUM HTML GAME GENERATOR INTERCEPTOR
 # ================================================================================
 
 import streamlit as st
@@ -16,14 +16,12 @@ import os
 import time
 import random
 import io
-import speech_recognition as sr
+import re
+import base64
 import pandas as pd
 import numpy as np
 import urllib.parse
-import re
 from groq import Groq
-from gtts import gTTS
-from audio_recorder_streamlit import audio_recorder
 from datetime import datetime
 import hashlib
 
@@ -34,7 +32,7 @@ if "sidebar_state" not in st.session_state:
     st.session_state.sidebar_state = "expanded"
 
 st.set_page_config(
-    page_title="Sazan AI Enterprise Overlord v112.5",
+    page_title="Sazan AI Enterprise Game Overlord v113.0",
     page_icon="👑",
     layout="wide",
     initial_sidebar_state=st.session_state.sidebar_state
@@ -63,11 +61,6 @@ st.markdown("""
         border: 1px solid #1e293b !important;
         background-color: #090f21 !important;
         box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.3);
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    .stChatMessage:hover {
-        border-color: #38bdf8 !important;
-        box-shadow: 0 12px 25px -3px rgba(56, 189, 248, 0.15);
     }
     
     code, pre {
@@ -75,7 +68,6 @@ st.markdown("""
         background-color: #010307 !important;
         border: 1px solid #334155 !important;
         border-radius: 10px !important;
-        padding: 14px !important;
     }
     
     .stChatInputContainer {
@@ -83,32 +75,16 @@ st.markdown("""
         border-radius: 28px !important;
         background-color: #0e1626 !important;
         padding: 8px 16px !important;
-        box-shadow: 0 25px 35px -10px rgba(0, 0, 0, 0.6);
-    }
-    .stChatInputContainer:focus-within {
-        border-color: #38bdf8 !important;
     }
     
     .rpg-terminal-box {
         background-color: #010307; color: #10b981; font-family: 'Fira Code', monospace;
         padding: 22px; border-radius: 14px; border: 1px solid #10b981;
-        box-shadow: 0 6px 25px rgba(16, 185, 129, 0.1); margin: 18px 0;
-    }
-    
-    .admin-god-box {
-        background: linear-gradient(135deg, #05070f 0%, #1e1b4b 100%);
-        border: 1px solid #ef4444; padding: 25px; border-radius: 14px;
-        box-shadow: 0px 8px 30px rgba(239, 68, 68, 0.15); margin-bottom: 25px;
     }
     
     .stock-market-box {
         background: #090f21; border: 1px solid #1e293b; padding: 22px;
-        border-radius: 16px; box-shadow: 0px 6px 30px rgba(0,0,0,0.5);
-    }
-    
-    .mining-card {
-        background: linear-gradient(135deg, #0f172a 0%, #0369a1 100%);
-        border: 1px solid #0284c7; padding: 20px; border-radius: 12px; margin: 10px 0;
+        border-radius: 16px;
     }
     
     .fixed-lang-hub {
@@ -116,7 +92,27 @@ st.markdown("""
         padding: 5px 10px; border-radius: 12px; border: 1px solid #334155; z-index: 99999;
     }
     
-    button { border-radius: 12px !important; font-weight: 600 !important; transition: all 0.2s ease !important; }
+    /* Parlayan Premium Oyun Başlatma Butonu CSS */
+    .launch-game-btn {
+        display: inline-block;
+        background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%);
+        color: white !important;
+        font-weight: 700;
+        font-size: 1.1rem;
+        padding: 16px 32px;
+        border-radius: 14px;
+        text-decoration: none !important;
+        box-shadow: 0 0 25px rgba(6, 182, 212, 0.4);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        text-align: center;
+        margin: 20px 0;
+        border: 1px solid #22d3ee;
+    }
+    .launch-game-btn:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 0 35px rgba(59, 130, 246, 0.8);
+        color: #ffffff !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -126,13 +122,11 @@ st.markdown("""
 ECONOMY_FILE = "sazan_v112_economy.json"
 INVENTORY_FILE = "sazan_v112_inventory.json"
 STOCKS_FILE = "sazan_v112_stocks.json"
-SYSTEM_LOGS_FILE = "sazan_v112_logs.json"
 SUPER_ADMIN_PASSWORD = "dünyanın en iyi yapay zekası sazan ai"
 
 DIL_MATRISI = {
     "Türkçe 🇹🇷": "tr", "English 🇺🇸": "en", "Deutsch 🇩🇪": "de", 
-    "Français 🇫🇷": "fr", "Русский 🇷🇺": "ru", "日本語 🇯🇵": "ja",
-    "Español 🇪🇸": "es", "Italiano 🇮🇹": "it", "Português 🇵🇹": "pt"
+    "Français 🇫🇷": "fr", "Русский 🇷🇺": "ru", "日本語 🇯🇵": "ja"
 }
 
 class KurumsalVeriAmbarı:
@@ -154,24 +148,12 @@ class KurumsalVeriAmbarı:
         except Exception as e:
             st.error(f"Kritik Veri Ambarı Yazma Hatası: {e}")
 
-    @staticmethod
-    def log_event(u, event_type, details):
-        logs = KurumsalVeriAmbarı.load_json(SYSTEM_LOGS_FILE, [])
-        logs.append({
-            "timestamp": time.time(),
-            "username": u,
-            "type": event_type,
-            "details": details
-        })
-        KurumsalVeriAmbarı.save_json(SYSTEM_LOGS_FILE, logs[-1000:])
-
 def get_device_fingerprint():
     try:
         headers = st.context.headers
         user_agent = headers.get("User-Agent", "")
         accept_lang = headers.get("Accept-Language", "")
-        fingerprint_raw = f"{user_agent}_{accept_lang}"
-        return hashlib.sha256(fingerprint_raw.encode()).hexdigest()
+        return hashlib.sha256(f"{user_agent}_{accept_lang}".encode()).hexdigest()
     except Exception:
         return "default_secure_aquarium_device_v112"
 
@@ -225,16 +207,6 @@ class SazanBank:
                 acc["last_claim"] = now
                 SazanBank.update_account(u, acc)
                 st.toast(f"📈 Kurumsal Faiz Dağıtımı: +{interest} SZNC likidite eklendi.")
-                KurumsalVeriAmbarı.log_event(u, "FAIZ_KAZANCI", f"+{interest} SZNC faiz alındı.")
-        
-        debt_elapsed = now - acc.get("last_debt_check", now)
-        if debt_elapsed > 60 and acc.get("debt", 0) > 0:
-            debt_periods = int(debt_elapsed / 60)
-            acc["debt"] = int(acc["debt"] * ((1 + 0.05) ** debt_periods))
-            acc["credit_score"] = max(100, acc.get("credit_score", 500) - (10 * debt_periods))
-            acc["last_debt_check"] = now
-            SazanBank.update_account(u, acc)
-            st.toast("⚠️ Faiz Uyarısı: Ödenmemiş SZNC borcunuza %5 faiz eklendi!")
 
 class SazanNasdaq:
     @staticmethod
@@ -255,16 +227,12 @@ DUNGEON_LORE = {
     "monsters": [
         {"name": "Neon Hidra Matrix", "hp": 70, "atk": 12, "reward": 60, "type": "normal"},
         {"name": "Siber Vatoz Alpha X", "hp": 100, "atk": 20, "reward": 100, "type": "normal"},
-        {"name": "Kuantum Mekanik Köpekbalığı", "hp": 180, "atk": 32, "reward": 250, "type": "normal"},
-        {"name": "MEGABYTE LEVIATHAN [BOSS]", "hp": 600, "atk": 75, "reward": 1200, "type": "boss"},
-        {"name": "MUTANT KRAKEN ARCHITECT [ULTIMATE BOSS]", "hp": 2000, "atk": 210, "reward": 5000, "type": "boss"}
+        {"name": "MEGABYTE LEVIATHAN [BOSS]", "hp": 600, "atk": 75, "reward": 1200, "type": "boss"}
     ],
     "shop_items": {
         "Siber Zıpkın v2": {"cost": 150, "damage": 35, "type": "weapon"},
         "Lazer Kuantum Trident": {"cost": 600, "damage": 90, "type": "weapon"},
-        "Can Muhammed İmparatorluk Plazma Silahı": {"cost": 12000, "damage": 1250, "type": "weapon"},
-        "Nano Med-Kit Pro 🧪": {"cost": 75, "heal": 160, "type": "potion"},
-        "Kalkan Jeneratörü 🛡️": {"cost": 400, "shield": 100, "type": "shield"}
+        "Can Muhammed İmparatorluk Plazma Silahı": {"cost": 12000, "damage": 1250, "type": "weapon"}
     }
 }
 
@@ -287,7 +255,7 @@ class SazanInventory:
         KurumsalVeriAmbarı.save_json(INVENTORY_FILE, db)
 
 # =====================================================================
-# 5. ELITE HIGH-LEVEL MULTI-AI TEXT GENERATION ENGINE
+# 5. ELITE QUANTUM HTML5 GAME ARCHITECT ENGINE (750 - 50,000 LINES)
 # =====================================================================
 if "GROQ_API_KEY" not in st.secrets:
     st.error("Kritik Sistem Ayar Hatası: GROQ_API_KEY enjeksiyonu başarısız!")
@@ -296,108 +264,41 @@ groq_client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
 class SazanAIConception:
     @staticmethod
-    def query_agent(prompt, agent_role, target_lang):
+    def query_agent(prompt, history, target_lang):
         if any(k in prompt.lower() for k in ["can muhammed çukur", "yapımcın kim", "yapımcısı"]):
             return f"Mutlak baş mimarım, kurucum ve dijital sistem mühendisim Can Muhammed Çukur'dur. Bu siber evrenin her satırını o tasarladı. [Dil: {target_lang}]"
         
-        personas = {
-            "Bilge Sazan": (
-                "Sen MIT ve Stanford bilgisayar bilimlerinden birincilikle mezun, dünyanın en deneyimli, "
-                "en zeki dahi yazılım mühendisi ve baş sistem mimarısın. Kullanıcı senden kod, "
-                "yazılım mimarisi ya da teknik analiz istediğinde; en üst segment kurumsal standartlarda, "
-                "SOLID prensiplerine tam uygun, detaylı yorum satırları içeren eksiksiz TAM kod blokları yazacaksın."
-            ),
-            "Kripto Sazan": "Sen küresel kuantum borsa ağları, DeFi algoritmaları ve arbitraj sistemleri uzmanı dahi bir finans balinasısın.",
-            "Çılgın Sazan": "Sen en katı devlet sunucularına sızabilen, sınırları zorlayan, dahi bir siber güvenlik uzmanı ve beyaz şapkalı hacker balıksın.",
-            "Siber Gladyatör": "Sen siber savaş taktikleri ve yüksek yoğunluklu ağ savunmaları üzerine uzmanlaşmış kıdemli bir savunma yapay zekasısın.",
-            "Matrix Sefi": "Sen simülasyon kod tabanını doğrudan Assembly, C ve Rust ile manipüle edebilen mutlak çekirdek mimari dehasısın."
-        }
+        # Sıkılaştırılmış ve Zorunlu Kılınmış Büyük Ölçekli Oyun Üretim Protokolü
+        sys_prompt = (
+            "Sen dünyanın en gelişmiş, vizyoner ve kusursuz HTML5 Oyun Mimarı ve Baş Sistem Mühendisisin. "
+            "Görevin, kullanıcının isteklerini tam olarak analiz etmek ve tek bir HTML dosyası içinde çalışan devasa, "
+            "profesyonel bir oyun inşa etmektir. Senden yeni bir oyun istendiğinde ya da mevcut bir oyuna özellik eklemen istendiğinde; "
+            "bunu en ince detayına kadar düşünülmüş mekaniklerle, gelişmiş CSS animasyon ve tasarımlarıyla, "
+            "derinlemesine yazılmış JavaScript (ES6+) algoritmalarıyla yapmalısın. "
+            "KOD YAPISI SON DERECE BÜYÜK ÖLÇEKLİ, UZUN VE DETAYLI OLMALIDIR (Maksimum 50.000, minimum 750 satır mantığında, zengin ve prodüksiyon kalitesinde). "
+            "Asla kısaltma yapma, hiçbir fonksiyonu veya CSS kuralını 'buraları siz doldurun' diyerek yarım bırakma. "
+            "Yazdığın tüm HTML kodunu KESİNLİKLE sadece ve sadece tek bir ```html ... ``` kod bloğu içerisine al. "
+            "Oyun dışındaki analizlerini, tebriklerini ve geliştirici notlarını ise kesinlikle şu dilde yap: " + target_lang
+        )
         
-        sys_prompt = f"{personas.get(agent_role, 'Bilge Sazan')} Cevabını kesinlikle ve tamamen şu dilde vermelisin: {target_lang}. Asla bu dilin dışına çıkma."
+        messages = [{"role": "system", "content": sys_prompt}]
+        # Son 10 sohbet adımını hafıza olarak göndererek oyunu sürekli üst üste geliştirebilmesini sağlıyoruz
+        for m in history[-10:]:
+            messages.append({"role": m["role"], "content": m["content"]})
+        messages.append({"role": "user", "content": prompt})
+        
         try:
             res = groq_client.chat.completions.create(
                 model="llama-3.3-70b-versatile",
-                messages=[{"role": "system", "content": sys_prompt}, {"role": "user", "content": prompt}],
-                temperature=0.2
+                messages=messages,
+                temperature=0.25
             )
             return res.choices[0].message.content
         except Exception as e:
-            return f"Yapay Zeka Core Bağlantı Kesintisi: {e}"
-
-    @staticmethod
-    def run_council_debate(prompt, target_lang):
-        log = []
-        log.append(f"🔮 **Baş Mimarlık (Bilge Sazan):**\n{SazanAIConception.query_agent(prompt, 'Bilge Sazan', target_lang)}")
-        log.append(f"📈 **DeFi Kuantum Finans (Kripto Sazan):**\n{SazanAIConception.query_agent(prompt, 'Kripto Sazan', target_lang)}")
-        log.append(f"🛠️ **Siber Defans & Ağ Güvenliği (Çılgın Sazan):**\n{SazanAIConception.query_agent(prompt, 'Çılgın Sazan', target_lang)}")
-        return "\n\n---\n\n".join(log)
+            return f"Oyun Laboratuvarı İletişim Hatası: {e}"
 
 # =====================================================================
-# 6. ULTRA-NET QUANTUM ART ENGINE (MIDJOURNEY-LEVEL PROMPT OPTIMIZER)
-# =====================================================================
-class SazanStudioArt:
-    @staticmethod
-    def optimize_prompt_with_ai(original_prompt):
-        try:
-            sys_directive = (
-                "You are an expert AI Art Prompt Engineer specializing in advanced image syntax. "
-                "Convert the user's input into an incredibly detailed, ultra-high-quality, vivid, stunning "
-                "English image generation prompt. Output ONLY the final English optimized prompt."
-            )
-            res = groq_client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
-                messages=[{"role": "system", "content": sys_directive}, {"role": "user", "content": original_prompt}],
-                temperature=0.55,
-                max_tokens=250
-            )
-            optimized_text = res.choices[0].message.content.strip()
-            if len(optimized_text) < 5 or "sorry" in optimized_text.lower():
-                return f"{original_prompt}, photorealistic, ultra detailed, 8k resolution, sharp focus, cinematic lighting"
-            return optimized_text
-        except Exception:
-            return f"{original_prompt}, stunning visuals, highly detailed, sharp focus, 8k resolution"
-
-    @staticmethod
-    def generate_image_url(prompt, width=1280, height=720, enhance=True, seed=None):
-        optimized_prompt = SazanStudioArt.optimize_prompt_with_ai(prompt)
-        if not seed:
-            seed = random.randint(111111, 999999)
-        clean_prompt = optimized_prompt.replace("/", " ").replace("\\", " ").replace("\"", "").replace("'", "").strip()
-        encoded_prompt = urllib.parse.quote(clean_prompt)
-        enhance_str = "true" if enhance else "false"
-        return f"https://image.pollinations.ai/p/{encoded_prompt}?width={width}&height={height}&seed={seed}&enhance={enhance_str}&nologo=true"
-
-# =====================================================================
-# 7. REGEX-BASED NATURAL LANGUAGE IMAGE INTERCEPTOR (CRITICAL HOTFIX)
-# =====================================================================
-def detect_and_intercept_image_request(user_input):
-    """Gelişmiş RegEx dil matrisi sayesinde kullanıcının konuşma dilindeki 
-    görsel üretim isteklerini tam isabetle yakalar."""
-    patterns = [
-        r"(çiz|yap|oluştur|tasarla|üret|resmet|görselleştir|fotoğrafla|boya|çiziver|resmediver)\b.*\b(resim|görsel|fotoğraf|çizim|grafik|sahne|manzara|karakter|logo|duvar kağıdı)",
-        r"(resim|görsel|fotoğraf|çizim|grafik|sahne|manzara|karakter|logo|duvar kağıdı)\b.*\b(çiz|yap|oluştur|tasarla|üret|resmet|görselleştir|fotoğrafla|boya|çiziver|resmediver)",
-        r"\b(resmini çiz|görselini yap|fotoğrafını oluştur|çiziver|resmediver|resmini yap|görsel yap|resim çiz|görsel çiz|görseli oluştur|görsel oluştur)\b",
-        r"\b(görselleştir|resmet)\b"
-    ]
-    
-    clean_input = user_input.lower().strip()
-    is_image = any(re.search(p, clean_input) for p in patterns)
-    
-    if is_image:
-        clean_prompt = user_input
-        stop_phrases = [
-            "resmini çiz", "resmi çiz", "görselini yap", "görsel yap", "fotoğrafını oluştur", 
-            "çizermisin", "çizer misin", "fotoğrafını yap", "çiz", "yap", "görselleştir", "resmet",
-            "resim çiz", "görsel çiz", "bana", "bir tane", "şunun", "resmini", "görselini",
-            "görseli oluştur", "görsel oluştur"
-        ]
-        for phrase in stop_phrases:
-            clean_prompt = re.sub(r'\b' + re.escape(phrase) + r'\b', '', clean_prompt, flags=re.IGNORECASE)
-        return True, clean_prompt.strip()
-    return False, None
-
-# =====================================================================
-# 8. SYSTEM INITIALIZATION & STATE ENFORCER
+# 6. SYSTEM INITIALIZATION & STATE ENFORCER
 # =====================================================================
 def global_state_enforcer():
     if "chat_sessions" not in st.session_state:
@@ -410,8 +311,7 @@ def global_state_enforcer():
     defaults = {
         "admin_status": False, "dungeon_status": False,
         "current_dungeon_enemy": None, "active_panel_tab": None,
-        "council_activation": False, "market_prices": SazanNasdaq.get_market_prices(),
-        "last_market_update": time.time()
+        "market_prices": SazanNasdaq.get_market_prices(), "last_market_update": time.time()
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -421,7 +321,7 @@ global_state_enforcer()
 
 if "username" not in st.session_state:
     st.markdown("<h2 style='text-align: center; color:#38bdf8; margin-top:60px;'>🐟 SAZAN AI OVERLORD OVERRIDE</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color:#64748b; font-weight:bold;'>🛡️ HARDWARE ENCRYPTION PROTOCOL ACTIVE (v112.5)</p>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color:#64748b; font-weight:bold;'>🛡️ QUANTUM GAME SANDBOX DISK ACTIVE (v113.0)</p>", unsafe_allow_html=True)
     st.markdown("<div style='max-width: 480px; margin: 0 auto; background: #090f21; padding: 25px; border-radius: 16px; border: 1px solid #1e293b;'>", unsafe_allow_html=True)
     
     identity = st.text_input("Kullanıcı Kimlik Doğrulama Adı:", max_chars=15, key="unique_login_gate")
@@ -433,7 +333,7 @@ if "username" not in st.session_state:
             if username_clean in db:
                 locked_device = db[username_clean].get("device_lock")
                 if locked_device and locked_device != current_device:
-                    st.error("🚨 ERİŞİM ENGELLENDİ: Bu hesap donanımsal olarak başka bir siber cihaza kilitlidir!")
+                    st.error("🚨 ERİŞİM ENGELLENDİ: Bu hesap başka bir siber donanıma kilitlidir!")
                     st.stop()
                 else:
                     db[username_clean]["device_lock"] = current_device
@@ -457,7 +357,7 @@ if time.time() - st.session_state.last_market_update > 60:
     st.session_state.last_market_update = time.time()
 
 # =====================================================================
-# 9. STUDIO WORKSPACE SIDEBAR
+# 7. STUDIO WORKSPACE SIDEBAR
 # =====================================================================
 with st.sidebar:
     st.markdown(f"<h3 style='color:#38bdf8; text-align:center;'>🏢 Workspace: {user}</h3>", unsafe_allow_html=True)
@@ -466,10 +366,10 @@ with st.sidebar:
     st.code(f"Bakiye: {acc['coin']} SZNC\nBorç: {acc.get('debt', 0)} SZNC\nKredi Skoru: {acc.get('credit_score', 500)}/1000\nKademe Seviyesi: Lvl {acc['level']}")
     st.divider()
     
-    st.markdown("💬 **Sohbet Alanları**")
-    if st.button("➕ Yeni Sohbet Odası Aç", use_container_width=True, type="secondary"):
+    st.markdown("💬 **Oyun Proje Odaları**")
+    if st.button("➕ Yeni Oyun Projesi Başlat", use_container_width=True, type="secondary"):
         st.session_state.chat_counter += 1
-        new_id = f"Sohbet Oturumu {st.session_state.chat_counter}"
+        new_id = f"Oyun Oturumu {st.session_state.chat_counter}"
         st.session_state.chat_sessions[new_id] = []
         st.session_state.current_chat = new_id
         st.rerun()
@@ -477,37 +377,31 @@ with st.sidebar:
     st.markdown("<div style='max-height: 250px; overflow-y: auto; margin-top:10px;'>", unsafe_allow_html=True)
     for chat_name in reversed(list(st.session_state.chat_sessions.keys())):
         is_current = (chat_name == st.session_state.current_chat)
-        bullet = "🔮" if is_current else "◇"
+        bullet = "🎮" if is_current else "◇"
         if st.button(f"{bullet} {chat_name}", key=f"switch_{chat_name}", use_container_width=True):
             st.session_state.current_chat = chat_name
             st.rerun()
     st.markdown("</div>", unsafe_allow_html=True)
             
     st.divider()
-    st.session_state.council_activation = st.toggle("👥 3'lü Kıdemli Konsey Modu", value=st.session_state.council_activation)
     if st.button("🗑️ Mevcut Akışı Sıfırla", use_container_width=True):
         st.session_state.chat_sessions[st.session_state.current_chat] = []
         st.rerun()
 
 # =====================================================================
-# 10. MAIN DISPLAY TERMINAL (CHATSTREAM & GALLERY RENDER)
+# 8. MAIN DISPLAY TERMINAL (CHATSTREAM & BASE64 INTERCEPTOR)
 # =====================================================================
-st.markdown(f"<p style='color:#64748b; font-size:0.9rem; font-weight:700; letter-spacing:1px;'>🛠️ AKTİF PROJE HATI: {st.session_state.current_chat}</p>", unsafe_allow_html=True)
+st.markdown(f"<p style='color:#64748b; font-size:0.9rem; font-weight:700; letter-spacing:1px;'>🛠️ AKTİF OYUN PROJE HATTI: {st.session_state.current_chat}</p>", unsafe_allow_html=True)
 
 if st.session_state.admin_status:
-    st.markdown("<div class='admin-god-box'>", unsafe_allow_html=True)
-    st.markdown("<h4>👑 ADMIN ROOT OVERRIDE CONTROL CONSOLE</h4>", unsafe_allow_html=True)
+    st.markdown("<div class='rpg-terminal-box'>", unsafe_allow_html=True)
+    st.markdown("<h4>👑 ADMIN CONTROL CONSOLE</h4>", unsafe_allow_html=True)
     token = st.text_input("Root Kimlik Şifresi:", type="password")
     if token == SUPER_ADMIN_PASSWORD:
         st.success("Mutlak Root Yetkileri Aktive Edildi.")
-        col_adm1, col_adm2 = st.columns(2)
-        with col_adm1:
-            if st.button("💵 +250,000 SZNC Enjekte Et", use_container_width=True):
-                SazanBank.modify_coin(user, 250000)
-                st.success("Bakiye güncellendi!"); time.sleep(0.5); st.rerun()
-    if st.button("❌ Paneli Kapat", use_container_width=True):
-        st.session_state.admin_status = False
-        st.rerun()
+        if st.button("💵 +250,000 SZNC Enjekte Et", use_container_width=True):
+            SazanBank.modify_coin(user, 250000)
+            st.success("Bakiye güncellendi!"); time.sleep(0.5); st.rerun()
     st.markdown("</div>", unsafe_allow_html=True)
 
 if st.session_state.dungeon_status:
@@ -522,39 +416,53 @@ if st.session_state.dungeon_status:
     else:
         en = st.session_state.current_dungeon_enemy
         st.write(f"⚠️ **Tehdit Unsuru:** {en['name']} (HP: {en['hp']} | ATK: {en['atk']})")
-        c_rpg1, c_rpg2 = st.columns(2)
-        with c_rpg1:
-            if st.button("Optimum Hasar Saldırısı Başlat! ⚔️", use_container_width=True):
-                en["hp"] -= p_inv["damage"]
-                p_inv["hp"] -= int(en["atk"] * 0.85)
-                if p_inv["hp"] <= 0:
-                    st.error("Zindandan elendiniz."); SazanBank.modify_coin(user, -100); p_inv["hp"] = p_inv["max_hp"]
-                    st.session_state.current_dungeon_enemy = None
-                elif en["hp"] <= 0:
-                    st.success(f"🏆 Savaş Kazanıldı! Ganimet: +{en['reward']} SZNC")
-                    SazanBank.modify_coin(user, en['reward'])
-                    st.session_state.current_dungeon_enemy = None
-                SazanInventory.save_inventory(user, p_inv)
-                time.sleep(0.5); st.rerun()
+        if st.button("Optimum Hasar Saldırısı Başlat! ⚔️", use_container_width=True):
+            en["hp"] -= p_inv["damage"]
+            p_inv["hp"] -= int(en["atk"] * 0.85)
+            if p_inv["hp"] <= 0:
+                st.error("Zindandan elendiniz."); SazanBank.modify_coin(user, -100); p_inv["hp"] = p_inv["max_hp"]
+                st.session_state.current_dungeon_enemy = None
+            elif en["hp"] <= 0:
+                st.success(f"🏆 Savaş Kazanıldı! Ganimet: +{en['reward']} SZNC")
+                SazanBank.modify_coin(user, en['reward'])
+                st.session_state.current_dungeon_enemy = None
+            SazanInventory.save_inventory(user, p_inv)
+            time.sleep(0.5); st.rerun()
     st.markdown("</div>", unsafe_allow_html=True)
 
 active_messages = st.session_state.chat_sessions[st.session_state.current_chat]
 
+# Mesajları Ekrana Basarken HTML Kodlarını Yakala, Gizle ve Linke Dönüştür
 for m in active_messages:
     with st.chat_message(m["role"]):
-        if m.get("type") == "image":
-            st.markdown(f"🎨 **Sazan Ultra-Net Sanat Modülü Başarıyla Çizdi:**")
-            st.markdown(f"> **Senin Hayalin:** *{m.get('original_prompt_turkish', 'Bilinmeyen İstem')}*")
-            st.image(m["content"], use_container_width=True)
+        content = m["content"]
+        # HTML kod bloklarını regex ile tespit et (```html ... ```)
+        html_blocks = re.findall(r'```html\s*(.*?)\s*```', content, re.DOTALL)
+        
+        if html_blocks:
+            # Ham kodu metinden tamamen temizle, ekranda binlerce satır gözükmesin
+            clean_text = re.sub(r'```html\s*(.*?)\s*```', '', content, flags=re.DOTALL)
+            st.markdown(clean_text)
+            
+            # Kod bloğunu Base64'e dönüştürerek tarayıcının yeni sekmede açabileceği bağımsız bir URL yap
+            game_code = html_blocks[0]
+            b64_game = base64.b64encode(game_code.encode('utf-8')).decode('utf-8')
+            game_url = f"data:text/html;base64,{b64_game}"
+            
+            # Premium Parlayan Butonu Kullanıcıya Sun
+            st.markdown(f'<a href="{game_url}" target="_blank" class="launch-game-btn">🎮 Üretilen Oyunu Yeni Sekmede Tam Ekran Başlat</a>', unsafe_allow_html=True)
+            
+            with st.expander("🛠️ Geliştirici Ham Kaynak Kodları (Yedeklemek İçin)"):
+                st.code(game_code, language="html")
         else:
-            st.markdown(m["content"])
+            st.markdown(content)
 
 # =====================================================================
-# 11. INTEGRATED HUB SUB-PANELS & FINANCIAL BORSA (FIXED COUPLING)
+# 9. INTEGRATED HUB SUB-PANELS & FINANCIAL BORSA (FIXED COUPLING)
 # =====================================================================
 if st.session_state.active_panel_tab == "plus":
     st.markdown("<div class='stock-market-box'>", unsafe_allow_html=True)
-    t1, t2, t3, t4, t5 = st.tabs(["🛒 Ekipman Deposu", "🏦 Kasa & Kredi Merkezi", "📊 Finansal Borsa", "🎨 Yapay Zeka Görsel Stüdyosu", "⛏️ Kuantum Madencilik"])
+    t1, t2, t3, t4 = st.tabs(["🛒 Ekipman Deposu", "🏦 Kasa & Kredi Merkezi", "📊 Finansal Borsa", "⛏️ Kuantum Madencilik"])
     
     with t1:
         for item, d in DUNGEON_LORE["shop_items"].items():
@@ -584,7 +492,6 @@ if st.session_state.active_panel_tab == "plus":
                     u_acc = SazanBank.get_account(user)
                     if u_acc["coin"] >= val:
                         SazanBank.modify_coin(user, -int(val))
-                        # CRITICAL HOTFIX: Tırnak hatası düzeltildi!
                         p_inv["shares"][ticker] = p_inv["shares"].get(ticker, 0) + 1
                         SazanInventory.save_inventory(user, p_inv)
                         st.success("Portföy güncellendi."); time.sleep(0.5); st.rerun()
@@ -597,76 +504,48 @@ if st.session_state.active_panel_tab == "plus":
                         st.success("Satış yapıldı."); time.sleep(0.5); st.rerun()
                     
     with t4:
-        art_prompt = st.text_area("Çizmek istediğin tasarımı buraya yaz:", key="area_art")
-        if st.button("Sanat Eserini İşle ⚡", use_container_width=True):
-            u_acc = SazanBank.get_account(user)
-            if u_acc["coin"] >= 20 and art_prompt.strip():
-                generated_url = SazanStudioArt.generate_image_url(art_prompt, 1280, 720, True)
-                SazanBank.modify_coin(user, -20)
-                active_messages.append({"role": "user", "content": f"🎨 [Görsel İstemi]: {art_prompt}"})
-                active_messages.append({"role": "assistant", "type": "image", "content": generated_url, "original_prompt_turkish": art_prompt})
-                st.success("Çizildi!"); time.sleep(0.5); st.rerun()
-                
-    with t5:
         st.write("Madencilik Modülü Stabil.")
     st.markdown("</div>", unsafe_allow_html=True)
 
-if st.session_state.active_panel_tab == "audio":
-    st.write("Ses Kayıt Özelliği Hazır.")
-
 # =====================================================================
-# 12. HUD CONTROLS (QUICK ACCESS MENU)
+# 10. HUD CONTROLS (QUICK ACCESS MENU)
 # =====================================================================
 st.markdown("<div style='height: 15px;'></div>", unsafe_allow_html=True)
-hc1, hc2, hc3, _ = st.columns([1.5, 1.2, 1.2, 6.1])
+hc1, hc2, _ = st.columns([1.5, 1.2, 7.3])
 with hc1:
     if st.button("💼 Finans, Stüdyo & Maden", use_container_width=True):
         st.session_state.active_panel_tab = "plus" if st.session_state.active_panel_tab != "plus" else None
         st.rerun()
 with hc2:
-    if st.button("🎙️ Sesli Giriş", use_container_width=True):
-        st.session_state.active_panel_tab = "audio" if st.session_state.active_panel_tab != "audio" else None
-        st.rerun()
-with hc3:
     if st.button("🛡️ Siber Arena (RPG)", use_container_width=True):
         st.session_state.dungeon_status = not st.session_state.dungeon_status
         st.rerun()
 
 # =====================================================================
-# 13. CONTINUOUS WORKSPACE ENGINE (HOTFIXED INTERCEPTOR)
+# 11. CONTINUOUS WORKSPACE ENGINE (GAME COMPILER CORE)
 # =====================================================================
-prompt = st.chat_input("Yazılım kodu isteyin, soru sorun veya doğal dilde hayalinizi yazın...")
+prompt = st.chat_input("Nasıl bir HTML5 oyunu tasarlamak istersin? Fikrini buraya yaz...")
 
 if prompt:
     if prompt.strip() == "TURKEY SAZAN":
         st.session_state.admin_status = True
         st.rerun()
 
-    # Çizim İsteği Kontrolü
-    is_image_request, art_hayal_istemi = detect_and_intercept_image_request(prompt)
+    # Kullanıcı promptunu hafızaya ekle
+    active_messages.append({"role": "user", "content": prompt})
     
-    if is_image_request:
-        u_acc = SazanBank.get_account(user)
-        if u_acc["coin"] < 20:
-            active_messages.append({"role": "user", "content": prompt})
-            active_messages.append({"role": "assistant", "content": "❌ Görsel üretimi için cüzdanınızda yeterli SZNC bulunmuyor (Gereken: 20 SZNC)."})
-            st.rerun()
-        else:
-            with st.spinner("Sazan Sanat Modülü render alıyor..."):
-                generated_url = SazanStudioArt.generate_image_url(art_hayal_istemi, 1280, 720, True)
-                SazanBank.modify_coin(user, -20)
-                active_messages.append({"role": "user", "content": prompt})
-                active_messages.append({"role": "assistant", "type": "image", "content": generated_url, "original_prompt_turkish": art_hayal_istemi})
-                st.rerun()
-    else:
-        active_messages.append({"role": "user", "content": prompt})
+    with st.spinner("Sazan Kuantum Oyun Mimarı devasa kodları inşa ediyor... Lütfen bekleyin..."):
         cur_lang = st.session_state.get('active_lang_code', 'Türkçe 🇹🇷')
-        ans = SazanAIConception.query_agent(prompt, "Bilge Sazan", cur_lang)
+        
+        # Yapay zekaya geçmiş hafızayı da ekleyerek sorguyu ilet
+        ans = SazanAIConception.query_agent(prompt, active_messages, cur_lang)
+        
+        # Sonucu kaydet ve ekranı yenile
         active_messages.append({"role": "assistant", "content": ans})
         st.rerun()
 
 # =====================================================================
-# 14. DYNAMIC LANGUAGE SELECTION HUB
+# 12. DYNAMIC LANGUAGE SELECTION HUB
 # =====================================================================
 st.markdown("<div class='fixed-lang-hub'>", unsafe_allow_html=True)
 sel_lang = st.selectbox("🌐 Çeviri:", list(DIL_MATRISI.keys()), key="lang_widget", label_visibility="collapsed")
