@@ -202,6 +202,64 @@ st.markdown(
         transform: translateY(-3px);
         box-shadow: 0 10px 22px -6px rgba(56, 189, 248, 0.35);
     }
+
+    /* --- v117 KİMLİK DOĞRULAMA & COOL UI UPGRADE --- */
+    [data-testid="stTextInput"] input {
+        background-color: #0e1626 !important;
+        border: 1px solid #334155 !important;
+        border-radius: 10px !important;
+        color: #f8fafc !important;
+        padding: 10px 14px !important;
+    }
+    [data-testid="stTextInput"] input:focus {
+        border-color: #22d3ee !important;
+        box-shadow: 0 0 14px rgba(34, 211, 238, 0.4) !important;
+    }
+
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 6px;
+        justify-content: center;
+    }
+    .stTabs [data-baseweb="tab"] {
+        background-color: #0e1626;
+        border-radius: 12px 12px 0 0;
+        padding: 10px 22px;
+        color: #94a3b8;
+        font-weight: 600;
+        border: 1px solid #1e293b;
+    }
+    .stTabs [aria-selected="true"] {
+        background-color: #10233a !important;
+        color: #22d3ee !important;
+        border-color: #22d3ee !important;
+    }
+
+    [data-testid="stVerticalBlockBorderWrapper"] {
+        border-radius: 22px !important;
+        border-color: #22d3ee !important;
+        background: linear-gradient(160deg, #0b1120 0%, #090f21 100%) !important;
+        box-shadow: 0 0 45px rgba(34, 211, 238, 0.16);
+        animation: sazanFadeInUp 0.5s ease-out;
+    }
+
+    [data-testid="stWidgetLabel"] p {
+        color: #94a3b8 !important;
+        font-weight: 600 !important;
+    }
+
+    .auth-logo-ring {
+        width: 78px; height: 78px; margin: 0 auto 6px auto;
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 2.1rem;
+        background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 60%, #a855f7 100%);
+        box-shadow: 0 0 30px rgba(59, 130, 246, 0.55);
+        animation: sazanGlowPulse 3s ease-in-out infinite;
+    }
+    .auth-caption {
+        text-align: center; color: #64748b; font-size: 0.85rem;
+        margin-bottom: 18px; font-weight: 500;
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -218,6 +276,7 @@ INVENTORY_FILE = os.path.join(DATA_DIR, "sazan_inventory.json")
 STOCKS_FILE = os.path.join(DATA_DIR, "sazan_stocks.json")
 GAMES_LIBRARY_FILE = os.path.join(DATA_DIR, "sazan_games_library.json")
 IMAGE_GALLERY_FILE = os.path.join(DATA_DIR, "sazan_image_gallery.json")
+AUTH_FILE = os.path.join(DATA_DIR, "sazan_auth.json")
 
 # ÖNEMLİ: Admin şifresi artık kaynak kodda açık yazmıyor.
 # GitHub'a yüklemeden önce bunu .streamlit/secrets.toml içine ekleyin:
@@ -284,6 +343,65 @@ def get_device_fingerprint():
         return hashlib.sha256(f"{user_agent}_{accept_lang}".encode()).hexdigest()
     except Exception:
         return "default_secure_aquarium_device_v114"
+
+
+# =====================================================================
+# 2.5. GERÇEK KİMLİK DOĞRULAMA MOTORU (GMAIL + ŞİFRE)
+# =====================================================================
+# Sadece geçerli formatta bir @gmail.com adresini kabul eder.
+GMAIL_REGEX = re.compile(
+    r"^[A-Za-z0-9](?:[A-Za-z0-9._%+-]*[A-Za-z0-9])?@gmail\.com$", re.IGNORECASE
+)
+
+
+class SazanAuth:
+    """
+    Kullanıcıları gerçek bir e-posta (Gmail) + şifre çifti ile kimlik
+    doğrulamasından geçirir. Şifreler ASLA açık metin olarak saklanmaz;
+    her hesap için üretilen benzersiz bir salt ile SHA-256 özetlenerek
+    sazan_auth.json içine yazılır.
+    """
+
+    @staticmethod
+    def _load():
+        return KurumsalVeriAmbari.load_json(AUTH_FILE, {})
+
+    @staticmethod
+    def _save(db):
+        KurumsalVeriAmbari.save_json(AUTH_FILE, db)
+
+    @staticmethod
+    def is_valid_gmail(email: str) -> bool:
+        return bool(GMAIL_REGEX.match((email or "").strip()))
+
+    @staticmethod
+    def email_exists(email: str) -> bool:
+        db = SazanAuth._load()
+        return email.strip().lower() in db
+
+    @staticmethod
+    def _hash_password(password: str, salt: str) -> str:
+        return hashlib.sha256(f"{salt}:{password}".encode("utf-8")).hexdigest()
+
+    @staticmethod
+    def register(email: str, password: str):
+        db = SazanAuth._load()
+        email_key = email.strip().lower()
+        salt = uuid.uuid4().hex
+        db[email_key] = {
+            "salt": salt,
+            "password_hash": SazanAuth._hash_password(password, salt),
+            "created_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
+        }
+        SazanAuth._save(db)
+
+    @staticmethod
+    def verify(email: str, password: str) -> bool:
+        db = SazanAuth._load()
+        record = db.get(email.strip().lower())
+        if not record:
+            return False
+        return SazanAuth._hash_password(password, record["salt"]) == record["password_hash"]
 
 
 # =====================================================================
@@ -691,11 +809,11 @@ groq_client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 # tamamen kapatılıyor. Bu yüzden varsayılan model listesi Groq'un önerdiği güncel
 # modellere (openai/gpt-oss ailesi ve qwen3.6) taşındı. Groq hesabından hangi
 # modellerin aktif olduğunu https://console.groq.com/docs/models üzerinden kontrol edebilirsin.
+# Sazan artık kararlılık ve tutarlılık için TEK ve SABİT bir yapay zeka modeli
+# kullanır. Model seçim arayüzü bilgi amaçlı gösterilir ama pasiftir (disabled).
+ACTIVE_MODEL_LABEL = "🏆 Sazan Kalite Motoru (GPT-OSS 120B)"
 AI_MODELS = {
-    "🏆 Kalite Modu (GPT-OSS 120B)": "openai/gpt-oss-120b",
-    "⚡ Hız Modu (GPT-OSS 20B)": "openai/gpt-oss-20b",
-    "🧠 Derin Düşünce (Qwen3.6 27B)": "qwen/qwen3.6-27b",
-    "🗄️ Klasik (Llama 3.3 70B - yakında kapanacak)": "llama-3.3-70b-versatile",
+    ACTIVE_MODEL_LABEL: "openai/gpt-oss-120b",
 }
 
 MAX_CONTINUATIONS = 4  # Kod kesilirse otomatik olarak kaç kez "devam et" denenecek
@@ -809,7 +927,7 @@ def global_state_enforcer():
         "last_market_update": time.time(),
         "active_lang_code": "Türkçe 🇹🇷",
         "pending_prompt": None,
-        "active_ai_model": "🏆 Kalite Modu (GPT-OSS 120B)",
+        "active_ai_model": ACTIVE_MODEL_LABEL,
         "print_studio_status": False,
         "image_studio_status": False,
     }
@@ -825,45 +943,107 @@ global_state_enforcer()
 # =====================================================================
 if "username" not in st.session_state:
     st.markdown(
-        "<h2 style='text-align: center; color:#38bdf8; margin-top:60px;'>🐟 SAZAN AI OVERLORD</h2>",
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        "<p style='text-align: center; color:#64748b; font-weight:bold;'>"
-        "🛡️ KUANTUM OYUN STÜDYOSU AKTİF (v116.0)</p>",
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        "<div style='max-width: 480px; margin: 0 auto; background: #090f21; padding: 25px; "
-        "border-radius: 16px; border: 1px solid #1e293b;'>",
+        """
+        <div class='sazan-hero' style='margin-top:34px;'>
+            <h1>🐟 SAZAN AI OVERLORD</h1>
+            <p>🛡️ Kuantum Oyun Stüdyosu · Görsel Sentezleyici · 3D Baskı Atölyesi</p>
+        </div>
+        """,
         unsafe_allow_html=True,
     )
 
-    identity = st.text_input("Kullanıcı Kimlik Doğrulama Adı:", max_chars=15, key="unique_login_gate")
-    if st.button("Güvenli Oturumu Başlat", use_container_width=True):
-        username_clean = identity.strip()
-        if username_clean:
-            db = KurumsalVeriAmbari.load_json(ECONOMY_FILE, {})
-            current_device = get_device_fingerprint()
-            if username_clean in db:
-                locked_device = db[username_clean].get("device_lock")
-                if locked_device and locked_device != current_device:
-                    st.error("🚨 ERİŞİM ENGELLENDİ: Bu hesap başka bir siber donanıma kilitlidir!")
-                    st.stop()
-                else:
-                    db[username_clean]["device_lock"] = current_device
-                    KurumsalVeriAmbari.save_json(ECONOMY_FILE, db)
-                    st.session_state.username = username_clean
-                    st.rerun()
-            else:
-                st.session_state.username = username_clean
-                SazanBank.get_account(username_clean)
-                st.success("🎉 Başarılı: Hesap doğrulandı!")
-                time.sleep(0.4)
-                st.rerun()
-        else:
-            st.warning("Lütfen bir kullanıcı adı girin.")
-    st.markdown("</div>", unsafe_allow_html=True)
+    _, mid_col, _ = st.columns([1, 1.35, 1])
+    with mid_col:
+        with st.container(border=True):
+            st.markdown("<div class='auth-logo-ring'>🐟</div>", unsafe_allow_html=True)
+            st.markdown(
+                "<h4 style='text-align:center; color:#f8fafc; margin:4px 0 2px 0;'>"
+                "Sazan Evrenine Hoş Geldin</h4>",
+                unsafe_allow_html=True,
+            )
+            st.markdown(
+                "<p class='auth-caption'>Devam etmek için Gmail adresinle giriş yap "
+                "ya da yeni bir hesap oluştur.</p>",
+                unsafe_allow_html=True,
+            )
+
+            tab_login, tab_signup = st.tabs(["➡️ Giriş Yap", "🆕 Hesap Oluştur"])
+
+            # --- GİRİŞ YAP SEKMESİ ---
+            with tab_login:
+                login_email = st.text_input(
+                    "📧 Gmail Adresin",
+                    key="login_email_input",
+                    placeholder="[email protected]",
+                )
+                login_pw = st.text_input(
+                    "🔑 Şifren", type="password", key="login_pw_input"
+                )
+                if st.button(
+                    "Giriş Yap", use_container_width=True, type="primary", key="login_submit_btn"
+                ):
+                    email_clean = login_email.strip()
+                    if not email_clean or not login_pw:
+                        st.error("⚠️ Lütfen e-posta ve şifreni gir.")
+                    elif not SazanAuth.is_valid_gmail(email_clean):
+                        st.error(
+                            "❌ Geçersiz e-posta! Lütfen '@gmail.com' ile biten "
+                            "geçerli bir Gmail adresi girin."
+                        )
+                    elif not SazanAuth.email_exists(email_clean):
+                        st.error(
+                            "❌ Bu Gmail adresine kayıtlı bir hesap bulunamadı. "
+                            "Önce '🆕 Hesap Oluştur' sekmesinden kayıt ol."
+                        )
+                    elif not SazanAuth.verify(email_clean, login_pw):
+                        st.error("❌ Şifre yanlış! Lütfen tekrar dene.")
+                    else:
+                        st.session_state.username = email_clean.lower()
+                        SazanBank.get_account(email_clean.lower())
+                        st.success("🎉 Giriş başarılı! Sazan evrenine yönlendiriliyorsun...")
+                        time.sleep(0.5)
+                        st.rerun()
+
+            # --- HESAP OLUŞTUR SEKMESİ ---
+            with tab_signup:
+                signup_email = st.text_input(
+                    "📧 Gmail Adresin",
+                    key="signup_email_input",
+                    placeholder="[email protected]",
+                )
+                signup_pw = st.text_input(
+                    "🔑 Şifre Belirle (en az 6 karakter)",
+                    type="password",
+                    key="signup_pw_input",
+                )
+                signup_pw_confirm = st.text_input(
+                    "🔑 Şifreni Tekrar Gir", type="password", key="signup_pw_confirm_input"
+                )
+                if st.button(
+                    "Hesap Oluştur", use_container_width=True, type="primary", key="signup_submit_btn"
+                ):
+                    email_clean = signup_email.strip()
+                    if not email_clean or not signup_pw or not signup_pw_confirm:
+                        st.error("⚠️ Lütfen tüm alanları doldur.")
+                    elif not SazanAuth.is_valid_gmail(email_clean):
+                        st.error(
+                            "❌ Geçersiz e-posta! Lütfen '@gmail.com' ile biten "
+                            "geçerli bir Gmail adresi girin."
+                        )
+                    elif SazanAuth.email_exists(email_clean):
+                        st.error("❌ Bu Gmail adresi zaten kayıtlı. '➡️ Giriş Yap' sekmesini kullan.")
+                    elif len(signup_pw) < 6:
+                        st.error("❌ Şifren en az 6 karakter olmalı.")
+                    elif signup_pw != signup_pw_confirm:
+                        st.error("❌ Şifreler birbiriyle eşleşmiyor.")
+                    else:
+                        SazanAuth.register(email_clean, signup_pw)
+                        st.session_state.username = email_clean.lower()
+                        SazanBank.get_account(email_clean.lower())
+                        st.success("🎉 Hesabın oluşturuldu! Sazan evrenine hoş geldin.")
+                        time.sleep(0.5)
+                        st.rerun()
+
     st.stop()
 
 user = st.session_state.username
@@ -879,6 +1059,9 @@ if time.time() - st.session_state.last_market_update > 60:
 # =====================================================================
 with st.sidebar:
     st.markdown(f"<h3 style='color:#38bdf8; text-align:center;'>🏢 Workspace: {user}</h3>", unsafe_allow_html=True)
+    if st.button("🚪 Çıkış Yap", use_container_width=True):
+        del st.session_state["username"]
+        st.rerun()
     acc = SazanBank.get_account(user)
     st.caption("❖ Finansal Likidite Durumu")
     st.code(
@@ -920,9 +1103,11 @@ with st.sidebar:
         list(AI_MODELS.keys()),
         key="active_ai_model",
         label_visibility="collapsed",
-        help="Kalite Modu daha detaylı ve tutarlı kod üretir ama daha yavaştır. "
-        "Hız Modu daha çabuk cevap verir, basit oyunlar için idealdir.",
+        disabled=True,
+        help="Sazan artık kararlılık ve maksimum kalite için sabit, tek bir "
+        "yapay zeka motoru kullanır. Bu nedenle model seçimi pasif hale getirildi.",
     )
+    st.caption("🔒 Sazan artık tek ve sabit bir yapay zeka motoruyla çalışır.")
 
     st.divider()
     st.markdown("💡 **Hızlı Oyun Şablonları**")
@@ -1262,7 +1447,7 @@ if st.session_state.get("image_studio_status", False):
             if ham_fikir.strip():
                 with st.spinner("Prompt profesyonelce zenginleştiriliyor..."):
                     cur_model = AI_MODELS.get(
-                        st.session_state.get("active_ai_model", "🏆 Kalite Modu (GPT-OSS 120B)"),
+                        st.session_state.get("active_ai_model", ACTIVE_MODEL_LABEL),
                         "openai/gpt-oss-120b",
                     )
                     zenginlesmis = SazanImageForge.enhance_prompt_with_ai(ham_fikir, model=cur_model)
@@ -1417,7 +1602,7 @@ if prompt:
     with st.spinner("Sazan Kuantum Oyun Mimarı devasa kodları inşa ediyor... Lütfen bekleyin..."):
         cur_lang = st.session_state.get("active_lang_code", "Türkçe 🇹🇷")
         cur_model = AI_MODELS.get(
-            st.session_state.get("active_ai_model", "🏆 Kalite Modu (GPT-OSS 120B)"),
+            st.session_state.get("active_ai_model", ACTIVE_MODEL_LABEL),
             "openai/gpt-oss-120b",
         )
         ans = SazanAIConception.query_agent(prompt, active_messages, cur_lang, model=cur_model)
