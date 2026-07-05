@@ -1,4 +1,1 @@
-# Şu an temel oyun motoru için ek sistem paketine gerek yok.
-# İleride ses/konuşma özelliği eklemek isterseniz aşağıdaki satırları açın:
-# ffmpeg
-# libportaudio2
+
