@@ -488,27 +488,48 @@ AI_MODELS = {
 }
 
 MAX_CONTINUATIONS = 4
+DEFAULT_MAX_TOKENS = 3000  # TPM limitine takılmamak için ölçülü tutuluyor (continuation ile tamamlanır)
+MIN_MAX_TOKENS = 700
+
+
+def _kisalt_gecmis_icerik(content, limit_chars=600):
+    """Geçmiş mesajlardaki büyük ```html``` oyun kodlarını, sohbet bağlamını şişirip TPM
+    limitini aşmaması için kısa bir özetle değiştirir. Sadece dışarıya gönderilecek
+    mesaj geçmişinde kullanılır; kullanıcının gördüğü orijinal mesaj değişmez."""
+    if "```html" in content:
+        clean_text = re.sub(r"```html\s*.*?\s*```", "[Önceki mesajda bir HTML oyunu üretildi — kod bu bağlamdan kısaltıldı]", content, flags=re.DOTALL)
+        return clean_text[:limit_chars]
+    return content[:limit_chars] if len(content) > limit_chars else content
 
 
 class SazanAIConception:
     @staticmethod
-    def _tek_istek(messages, model_cfg):
+    def _tek_istek(messages, model_cfg, max_tokens=DEFAULT_MAX_TOKENS):
         kwargs = dict(
             model=model_cfg["id"],
             messages=messages,
             temperature=model_cfg.get("temp", 0.4),
             top_p=0.9,
-            max_tokens=8000,
+            max_tokens=max_tokens,
         )
         effort = model_cfg.get("effort")
         if effort:
             kwargs["reasoning_effort"] = effort
         try:
             return groq_client.chat.completions.create(**kwargs)
-        except Exception:
-            # reasoning_effort desteklemeyen bir model olabilir — onsuz tekrar dene
-            kwargs.pop("reasoning_effort", None)
-            return groq_client.chat.completions.create(**kwargs)
+        except Exception as e:
+            err_text = str(e).lower()
+            if "reasoning_effort" in err_text or "unsupported" in err_text:
+                # reasoning_effort desteklemeyen bir model olabilir — onsuz tekrar dene
+                kwargs.pop("reasoning_effort", None)
+                return groq_client.chat.completions.create(**kwargs)
+            if "rate_limit_exceeded" in err_text or "413" in err_text or "too large" in err_text:
+                # TPM limiti aşıldı — daha küçük bir max_tokens ile tekrar dene
+                smaller = max(MIN_MAX_TOKENS, int(max_tokens * 0.5))
+                if smaller < max_tokens:
+                    kwargs["max_tokens"] = smaller
+                    return groq_client.chat.completions.create(**kwargs)
+            raise
 
     @staticmethod
     def query_agent(prompt, history, target_lang, model_cfg):
@@ -540,8 +561,10 @@ class SazanAIConception:
         )
 
         messages = [{"role": "system", "content": sys_prompt}]
-        for m in history[-10:]:
-            messages.append({"role": m["role"], "content": m["content"]})
+        # Not: geçmişteki büyük HTML oyun kodları bağlamdan kısaltılır ki TPM
+        # (dakika başına token) limitine takılmayalım. Son 6 mesajla sınırlı tutulur.
+        for m in history[-6:-1]:
+            messages.append({"role": m["role"], "content": _kisalt_gecmis_icerik(m["content"])})
         messages.append({"role": "user", "content": prompt})
 
         try:
