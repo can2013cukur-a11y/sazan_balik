@@ -1,0 +1,16 @@
+# Gizli anahtarlar - ASLA GitHub'a yüklenmemeli
+.streamlit/secrets.toml
+
+# Kullanıcı verileri (ekonomi, envanter, oyun kütüphanesi)
+sazan_data/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# OS / IDE
+.DS_Store
+.vscode/
+.idea/
