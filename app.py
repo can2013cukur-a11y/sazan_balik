@@ -20,6 +20,8 @@ import base64
 import uuid
 import hashlib
 import io
+import urllib.request
+import urllib.parse
 from datetime import datetime, date
 
 import numpy as np
@@ -215,6 +217,7 @@ ECONOMY_FILE = os.path.join(DATA_DIR, "sazan_economy.json")
 INVENTORY_FILE = os.path.join(DATA_DIR, "sazan_inventory.json")
 STOCKS_FILE = os.path.join(DATA_DIR, "sazan_stocks.json")
 GAMES_LIBRARY_FILE = os.path.join(DATA_DIR, "sazan_games_library.json")
+IMAGE_GALLERY_FILE = os.path.join(DATA_DIR, "sazan_image_gallery.json")
 
 # ÖNEMLİ: Admin şifresi artık kaynak kodda açık yazmıyor.
 # GitHub'a yüklemeden önce bunu .streamlit/secrets.toml içine ekleyin:
@@ -238,6 +241,19 @@ GAME_TEMPLATES = [
     "🏰 Basit bir kule savunma (tower defense) prototipi",
     "🃏 Kart eşleştirme hafıza oyunu (memory match)",
 ]
+
+# Görsel Üretim Atölyesi için hazır stil presetleri (İngilizce prompt eklentisi olarak kullanılır)
+IMAGE_STYLE_PRESETS = {
+    "🎯 Otomatik (AI Karar Versin)": "",
+    "📷 Fotogerçekçi": "ultra realistic, photorealistic, 8k, professional photography, sharp focus, natural lighting",
+    "🎨 Dijital Sanat": "digital art, trending on artstation, highly detailed, vibrant colors, concept art",
+    "🌆 Cyberpunk": "cyberpunk style, neon lights, futuristic city, blade runner atmosphere, high contrast",
+    "🧙 Fantastik": "fantasy art, epic, magical atmosphere, dramatic lighting, detailed illustration",
+    "🕹️ Piksel Sanatı": "pixel art, 16-bit retro game style, crisp pixels, limited color palette",
+    "🖼️ Suluboya": "watercolor painting, soft brush strokes, artistic, pastel colors",
+    "🧊 3D Render": "3d render, octane render, unreal engine, cinematic lighting, highly detailed",
+    "✏️ Anime / Manga": "anime style, manga illustration, cel shaded, vibrant, studio quality",
+}
 
 
 class KurumsalVeriAmbari:
@@ -546,6 +562,109 @@ class SazanPrintStudio:
 
 
 # =====================================================================
+# 5.6. GÖRSEL ÜRETİM ATÖLYESİ - AI PROMPT'TAN GÖRSEL SENTEZLEYİCİ
+# =====================================================================
+class SazanImageForge:
+    """
+    Kullanıcının yazdığı fikri (hangi dilde olursa olsun) önce Groq üzerindeki
+    dil modeliyle profesyonel, detaylı bir İngilizce görsel üretim prompt'una
+    dönüştürür, ardından bu prompt'u anahtarsız/ücretsiz çalışan bir difüzyon
+    görsel sentezleme uç noktasına göndererek gerçek bir PNG görsel üretir.
+    Üretilen görseller kullanıcıya özel kalıcı bir galeriye kaydedilir.
+    """
+
+    # Anahtarsız, ücretsiz çalışan açık görsel sentezleme uç noktası.
+    BASE_ENDPOINT = "https://image.pollinations.ai/prompt/"
+
+    @staticmethod
+    def get_gallery(u):
+        db = KurumsalVeriAmbari.load_json(IMAGE_GALLERY_FILE, {})
+        return db.get(u, [])
+
+    @staticmethod
+    def add_image(u, prompt_ozet, stil, image_bytes):
+        db = KurumsalVeriAmbari.load_json(IMAGE_GALLERY_FILE, {})
+        if u not in db:
+            db[u] = []
+        entry = {
+            "id": uuid.uuid4().hex[:10],
+            "prompt": prompt_ozet[:180],
+            "stil": stil,
+            "image_b64": base64.b64encode(image_bytes).decode("utf-8"),
+            "created_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
+        }
+        db[u].insert(0, entry)
+        db[u] = db[u][:40]  # kullanıcı başına en fazla 40 görsel sakla
+        KurumsalVeriAmbari.save_json(IMAGE_GALLERY_FILE, db)
+        return entry
+
+    @staticmethod
+    def delete_image(u, image_id):
+        db = KurumsalVeriAmbari.load_json(IMAGE_GALLERY_FILE, {})
+        if u in db:
+            db[u] = [g for g in db[u] if g["id"] != image_id]
+            KurumsalVeriAmbari.save_json(IMAGE_GALLERY_FILE, db)
+
+    @staticmethod
+    def enhance_prompt_with_ai(ham_prompt, model="openai/gpt-oss-120b"):
+        """Kullanıcının kısa/Türkçe görsel fikrini; kompozisyon, ışık, renk
+        paleti ve atmosfer detaylarını içeren zengin bir İngilizce görsel
+        üretim prompt'una dönüştürür. Groq'taki dil modelini kullanır."""
+        sys_prompt = (
+            "Sen profesyonel bir görsel üretim (text-to-image) prompt mühendisisin. "
+            "Kullanıcı sana herhangi bir dilde kısa bir görsel fikri verecek. "
+            "Görevin bu fikri; kompozisyon, ışıklandırma, renk paleti, atmosfer "
+            "ve detay seviyesini net biçimde belirten, İngilizce, tek paragraf, "
+            "en fazla 70 kelimelik zengin bir görsel üretim prompt'una çevirmektir. "
+            "SADECE prompt metnini döndür; açıklama, giriş cümlesi, tırnak "
+            "işareti veya markdown ekleme."
+        )
+        try:
+            res = groq_client.chat.completions.create(
+                model=model,
+                messages=[
+                    {"role": "system", "content": sys_prompt},
+                    {"role": "user", "content": ham_prompt},
+                ],
+                temperature=0.6,
+                top_p=0.9,
+                max_tokens=220,
+            )
+            enhanced = (res.choices[0].message.content or "").strip()
+            enhanced = enhanced.strip('"').strip()
+            return enhanced if enhanced else ham_prompt
+        except Exception:
+            # AI zenginleştirme başarısız olursa, kullanıcının ham fikriyle devam et
+            return ham_prompt
+
+    @staticmethod
+    def generate_image(prompt_text, style_suffix="", width=1024, height=1024, seed=None):
+        """Verilen prompt'u (ve seçilen stil eklentisini) görsel sentezleme
+        motoruna gönderir, üretilen PNG byte dizisini geri döndürür."""
+        final_prompt = prompt_text.strip()
+        if style_suffix:
+            final_prompt = f"{final_prompt}, {style_suffix}"
+
+        width = max(256, min(int(width), 1536))
+        height = max(256, min(int(height), 1536))
+        seed_val = int(seed) if seed is not None else random.randint(1, 9_999_999)
+
+        encoded_prompt = urllib.parse.quote(final_prompt)
+        query = urllib.parse.urlencode(
+            {"width": width, "height": height, "seed": seed_val, "nologo": "true"}
+        )
+        full_url = f"{SazanImageForge.BASE_ENDPOINT}{encoded_prompt}?{query}"
+
+        req = urllib.request.Request(
+            full_url, headers={"User-Agent": "Mozilla/5.0 (SazanAI ImageForge)"}
+        )
+        with urllib.request.urlopen(req, timeout=90) as response:
+            image_bytes = response.read()
+
+        return image_bytes, final_prompt, seed_val
+
+
+# =====================================================================
 # 6. GROQ AI OYUN MİMARI MOTORU (API ANAHTARI GÜVENLİ ŞEKİLDE SAKLANIR)
 # =====================================================================
 # API anahtarı ASLA kaynak kodun içine yazılmaz. Streamlit'in "secrets" sistemi
@@ -692,6 +811,7 @@ def global_state_enforcer():
         "pending_prompt": None,
         "active_ai_model": "🏆 Kalite Modu (GPT-OSS 120B)",
         "print_studio_status": False,
+        "image_studio_status": False,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -1104,10 +1224,164 @@ if st.session_state.get("print_studio_status", False):
     st.markdown("</div>", unsafe_allow_html=True)
 
 # =====================================================================
+# 11.6. 🎨 GÖRSEL ÜRETİM ATÖLYESİ (AI PROMPT'TAN GÖRSEL SENTEZLE)
+# =====================================================================
+if st.session_state.get("image_studio_status", False):
+    st.markdown("<div class='print-studio-box'>", unsafe_allow_html=True)
+    st.markdown("<h4>🎨 GÖRSEL ÜRETİM ATÖLYESİ — PROMPT'TAN GÖRSEL SENTEZLE</h4>", unsafe_allow_html=True)
+    st.markdown(
+        "Aklındaki görseli anlat; Sazan önce Groq üzerindeki dil modeliyle fikrini "
+        "profesyonel bir görsel üretim prompt'una dönüştürsün, ardından gerçek bir "
+        "görsel üretsin. Türkçe (veya istediğin herhangi bir dilde) yazabilirsin, "
+        "çeviri ve zenginleştirme otomatik yapılır."
+    )
+
+    img_col1, img_col2 = st.columns([1.5, 1])
+
+    with img_col1:
+        ham_fikir = st.text_area(
+            "💭 Görsel Fikrin:",
+            placeholder="Örn: Ay ışığında bir kaleye bakan zırhlı bir ejderha, sisli dağlar arasında...",
+            key="img_forge_prompt_input",
+            height=110,
+        )
+
+        stil_secim = st.selectbox(
+            "🎭 Görsel Stili:",
+            list(IMAGE_STYLE_PRESETS.keys()),
+            key="img_forge_style_select",
+        )
+
+        enh_col, gen_col = st.columns(2)
+        with enh_col:
+            enhance_clicked = st.button("✨ AI ile Prompt'u Geliştir", use_container_width=True)
+        with gen_col:
+            generate_clicked = st.button("🖼️ Görseli Üret", use_container_width=True, type="primary")
+
+        if enhance_clicked:
+            if ham_fikir.strip():
+                with st.spinner("Prompt profesyonelce zenginleştiriliyor..."):
+                    cur_model = AI_MODELS.get(
+                        st.session_state.get("active_ai_model", "🏆 Kalite Modu (GPT-OSS 120B)"),
+                        "openai/gpt-oss-120b",
+                    )
+                    zenginlesmis = SazanImageForge.enhance_prompt_with_ai(ham_fikir, model=cur_model)
+                    st.session_state["img_forge_enhanced_prompt"] = zenginlesmis
+                    st.rerun()
+            else:
+                st.warning("Önce bir görsel fikri yaz.")
+
+        if st.session_state.get("img_forge_enhanced_prompt"):
+            st.text_area(
+                "🧠 AI Tarafından Geliştirilmiş Prompt (istersen elle düzenleyebilirsin):",
+                key="img_forge_enhanced_prompt",
+                height=90,
+            )
+
+    with img_col2:
+        boyut_secim = st.selectbox(
+            "📐 Görsel Boyutu:",
+            ["Kare (1024x1024)", "Portre (768x1024)", "Manzara (1024x768)", "Geniş Ekran (1280x720)"],
+            key="img_forge_size_select",
+        )
+        rastgele_seed = st.checkbox("🎲 Rastgele Seed Kullan", value=True, key="img_forge_random_seed")
+        sabit_seed = None
+        if not rastgele_seed:
+            sabit_seed = st.number_input(
+                "Sabit Seed Değeri", min_value=1, max_value=9999999, value=42, step=1
+            )
+
+    boyut_haritasi = {
+        "Kare (1024x1024)": (1024, 1024),
+        "Portre (768x1024)": (768, 1024),
+        "Manzara (1024x768)": (1024, 768),
+        "Geniş Ekran (1280x720)": (1280, 720),
+    }
+    secili_w, secili_h = boyut_haritasi[boyut_secim]
+
+    if generate_clicked:
+        nihai_prompt = st.session_state.get("img_forge_enhanced_prompt") or ham_fikir
+        if not nihai_prompt or not nihai_prompt.strip():
+            st.error("⚠️ Lütfen önce bir görsel fikri yaz.")
+        else:
+            with st.spinner("🎨 Kuantum difüzyon motoru görseli inşa ediyor... Lütfen bekleyin..."):
+                try:
+                    stil_suffix = IMAGE_STYLE_PRESETS.get(stil_secim, "")
+                    img_bytes, kullanilan_prompt, kullanilan_seed = SazanImageForge.generate_image(
+                        nihai_prompt,
+                        style_suffix=stil_suffix,
+                        width=secili_w,
+                        height=secili_h,
+                        seed=sabit_seed,
+                    )
+                    st.session_state["img_forge_last_result"] = {
+                        "bytes": img_bytes,
+                        "prompt": kullanilan_prompt,
+                        "seed": kullanilan_seed,
+                        "stil": stil_secim,
+                    }
+
+                    SazanImageForge.add_image(user, ham_fikir or nihai_prompt, stil_secim, img_bytes)
+                    SazanBank.modify_coin(user, 10)  # her üretimde küçük bir ödül
+                    st.toast("🖼️ Görsel galeriye kaydedildi! (+10 SZNC)")
+                except Exception as e:
+                    st.error(f"⚠️ Görsel üretilirken hata oluştu: {e}")
+
+    if st.session_state.get("img_forge_last_result"):
+        sonuc = st.session_state["img_forge_last_result"]
+        st.divider()
+        st.image(
+            sonuc["bytes"],
+            caption=f"Seed: {sonuc['seed']} | Stil: {sonuc['stil']}",
+            use_container_width=True,
+        )
+        st.download_button(
+            "⬇️ Görseli .png Olarak İndir",
+            data=sonuc["bytes"],
+            file_name=f"sazan_gorsel_{sonuc['seed']}.png",
+            mime="image/png",
+            use_container_width=True,
+        )
+        with st.expander("🔍 Kullanılan Nihai Prompt"):
+            st.code(sonuc["prompt"], language="text")
+
+    st.divider()
+    st.markdown("📚 **Görsel Galerim**")
+    galeri = SazanImageForge.get_gallery(user)
+    if not galeri:
+        st.info(
+            "Henüz galerinde kayıtlı bir görsel yok. Yukarıdan bir görsel "
+            "ürettiğinde otomatik olarak buraya eklenir."
+        )
+    else:
+        gal_cols = st.columns(3)
+        for i, g in enumerate(galeri):
+            with gal_cols[i % 3]:
+                st.markdown("<div class='library-card'>", unsafe_allow_html=True)
+                img_raw = base64.b64decode(g["image_b64"])
+                st.image(img_raw, use_container_width=True)
+                st.caption(f"🎭 {g['stil']}  ·  {g['created_at']}")
+                kisa_prompt = g["prompt"][:60] + ("..." if len(g["prompt"]) > 60 else "")
+                st.caption(f"💭 {kisa_prompt}")
+                gcol1, gcol2 = st.columns(2)
+                with gcol1:
+                    st.download_button(
+                        "⬇️", data=img_raw, file_name=f"sazan_gorsel_{g['id']}.png",
+                        mime="image/png", key=f"gal_dl_{g['id']}", use_container_width=True,
+                    )
+                with gcol2:
+                    if st.button("🗑️", key=f"gal_del_{g['id']}", use_container_width=True):
+                        SazanImageForge.delete_image(user, g["id"])
+                        st.rerun()
+                st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+# =====================================================================
 # 12. HUD KONTROLLERİ (HIZLI ERİŞİM MENÜSÜ)
 # =====================================================================
 st.markdown("<div style='height: 15px;'></div>", unsafe_allow_html=True)
-hc1, hc2, hc3, _ = st.columns([1.5, 1.2, 1.5, 6.1])
+hc1, hc2, hc3, hc4, _ = st.columns([1.5, 1.2, 1.5, 1.8, 4.3])
 with hc1:
     if st.button("💼 Finans, Stüdyo & Maden", use_container_width=True):
         st.session_state.active_panel_tab = "plus" if st.session_state.active_panel_tab != "plus" else None
@@ -1119,6 +1393,10 @@ with hc2:
 with hc3:
     if st.button("🖨️ 3D Baskı Atölyesi", use_container_width=True, type="primary"):
         st.session_state.print_studio_status = not st.session_state.get("print_studio_status", False)
+        st.rerun()
+with hc4:
+    if st.button("🎨 Görsel Üretim Atölyesi", use_container_width=True, type="primary"):
+        st.session_state.image_studio_status = not st.session_state.get("image_studio_status", False)
         st.rerun()
 
 # =====================================================================
