@@ -5,9 +5,9 @@
 # ╚════██║██╔══██║ ███╔╝  ██╔══██║██║╚██╗██║     ██║   ██║╚════██║
 # ███████║██║  ██║███████╗██║  ██║██║ ╚████║     ╚██████╔╝███████║
 # ╚══════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝      ╚═════╝ ╚══════╝
-#        👑 SAZAN AI ENTERPRISE STUDIO - GAME ENGINE SUPREME v114.0 👑
+#        👑 SAZAN AI ENTERPRISE STUDIO - GAME ENGINE SUPREME v115.0 👑
 #        DEVELOPED BY: CAN MUHAMMED ÇUKUR - THE MUTLAK ARCHITECT
-#        PATCH NOTE: OYUN KÜTÜPHANESİ + İNDİRME + GÜVENLİ SECRETS + GÜNLÜK BONUS
+#        PATCH NOTE: KESİNTİSİZ KOD ÜRETİMİ + MODEL SEÇİMİ + GÖRSELDEN 3D BASKI (STL) ATÖLYESİ
 # ================================================================================
 
 import streamlit as st
@@ -19,7 +19,12 @@ import re
 import base64
 import uuid
 import hashlib
+import io
 from datetime import datetime, date
+
+import numpy as np
+from PIL import Image
+from stl import mesh as stl_mesh
 
 from groq import Groq
 
@@ -30,7 +35,7 @@ if "sidebar_state" not in st.session_state:
     st.session_state.sidebar_state = "expanded"
 
 st.set_page_config(
-    page_title="Sazan AI Enterprise Game Overlord v114.0",
+    page_title="Sazan AI Enterprise Game Overlord v115.0",
     page_icon="👑",
     layout="wide",
     initial_sidebar_state=st.session_state.sidebar_state,
@@ -356,6 +361,117 @@ class SazanGameLibrary:
 
 
 # =====================================================================
+# 5.5. 3D BASKI ATÖLYESİ - GÖRSELDEN STL (KABARTMA/LİTOFAN) ÜRETİCİSİ
+# =====================================================================
+class SazanPrintStudio:
+    """
+    Yüklenen bir görseli gri tonlamalı bir yükseklik haritasına (heightmap)
+    dönüştürüp, 3D yazıcılarda basılabilecek kapalı (watertight) bir STL
+    kabartma modeli üretir. Bu; fotoğraftan lityofan/rölyef tarzı 3D baskılar
+    için pratik ve yaygın kullanılan bir tekniktir (tam bir 3D nesne
+    rekonstrüksiyonu değildir, görselin kabartmalı bir yorumudur).
+    """
+
+    MAX_RESOLUTION_PX = 220  # performans ve dosya boyutu için üst sınır
+
+    @staticmethod
+    def generate_stl_from_image(
+        image: Image.Image,
+        max_size_px: int = 120,
+        base_height_mm: float = 2.0,
+        relief_height_mm: float = 5.0,
+        pixel_size_mm: float = 0.6,
+        invert: bool = False,
+    ):
+        max_size_px = max(10, min(max_size_px, SazanPrintStudio.MAX_RESOLUTION_PX))
+
+        img = image.convert("L")
+        w, h = img.size
+        scale = max_size_px / max(w, h)
+        new_w, new_h = max(2, int(w * scale)), max(2, int(h * scale))
+        img = img.resize((new_w, new_h), Image.LANCZOS)
+
+        arr = np.asarray(img, dtype=np.float64) / 255.0
+        if invert:
+            arr = 1.0 - arr
+
+        rows, cols = arr.shape
+        if rows < 2 or cols < 2:
+            raise ValueError("Görsel çözünürlüğü çok düşük, en az 2x2 piksel gerekiyor.")
+
+        top_z = base_height_mm + arr * relief_height_mm
+        bottom_z = np.zeros_like(top_z)
+
+        xs = np.arange(cols) * pixel_size_mm
+        ys = np.arange(rows) * pixel_size_mm
+        X, Y = np.meshgrid(xs, ys)
+
+        top_v = np.stack([X, Y, top_z], axis=-1).reshape(-1, 3)
+        bot_v = np.stack([X, Y, bottom_z], axis=-1).reshape(-1, 3)
+
+        ii, jj = np.mgrid[0 : rows - 1, 0 : cols - 1]
+        v00 = (ii * cols + jj).ravel()
+        v01 = (ii * cols + (jj + 1)).ravel()
+        v10 = ((ii + 1) * cols + jj).ravel()
+        v11 = ((ii + 1) * cols + (jj + 1)).ravel()
+
+        tris = [
+            np.stack([top_v[v00], top_v[v10], top_v[v11]], axis=1),
+            np.stack([top_v[v00], top_v[v11], top_v[v01]], axis=1),
+            np.stack([bot_v[v00], bot_v[v11], bot_v[v10]], axis=1),
+            np.stack([bot_v[v00], bot_v[v01], bot_v[v11]], axis=1),
+        ]
+
+        def wall(a_idx, b_idx):
+            t1 = np.stack([top_v[a_idx], bot_v[a_idx], bot_v[b_idx]], axis=1)
+            t2 = np.stack([top_v[a_idx], bot_v[b_idx], top_v[b_idx]], axis=1)
+            return t1, t2
+
+        top_row = np.arange(0, cols)
+        idx_top_row = 0 * cols + top_row
+        a, b = idx_top_row[:-1], idx_top_row[1:]
+        t1, t2 = wall(b, a)
+        tris += [t1, t2]
+
+        idx_bot_row = (rows - 1) * cols + top_row
+        a, b = idx_bot_row[:-1], idx_bot_row[1:]
+        t1, t2 = wall(a, b)
+        tris += [t1, t2]
+
+        left_col = np.arange(0, rows) * cols
+        a, b = left_col[:-1], left_col[1:]
+        t1, t2 = wall(a, b)
+        tris += [t1, t2]
+
+        right_col = np.arange(0, rows) * cols + (cols - 1)
+        a, b = right_col[:-1], right_col[1:]
+        t1, t2 = wall(b, a)
+        tris += [t1, t2]
+
+        all_tris = np.concatenate(tris, axis=0)
+        # Dış yüzey normalleri doğru yöne (dışa) baksın diye köşe sırasını çevir
+        all_tris[:, [1, 2]] = all_tris[:, [2, 1]]
+
+        data = np.zeros(all_tris.shape[0], dtype=stl_mesh.Mesh.dtype)
+        data["vectors"] = all_tris
+        generated_mesh = stl_mesh.Mesh(data)
+
+        buf = io.BytesIO()
+        generated_mesh.save("sazan_model.stl", fh=buf, mode=stl_mesh.stl.Mode.BINARY)
+        buf.seek(0)
+
+        width_mm = (new_w - 1) * pixel_size_mm
+        depth_mm = (new_h - 1) * pixel_size_mm
+        height_mm = base_height_mm + relief_height_mm
+
+        return buf.read(), {
+            "resolution": (new_w, new_h),
+            "triangles": int(all_tris.shape[0]),
+            "boyut_mm": (round(width_mm, 1), round(depth_mm, 1), round(height_mm, 1)),
+        }
+
+
+# =====================================================================
 # 6. GROQ AI OYUN MİMARI MOTORU (API ANAHTARI GÜVENLİ ŞEKİLDE SAKLANIR)
 # =====================================================================
 # API anahtarı ASLA kaynak kodun içine yazılmaz. Streamlit'in "secrets" sistemi
@@ -376,10 +492,28 @@ if "GROQ_API_KEY" not in st.secrets:
 
 groq_client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
+# Kalite/hız tercihine göre seçilebilecek modeller
+AI_MODELS = {
+    "🏆 Kalite Modu (Llama 3.3 70B)": "llama-3.3-70b-versatile",
+    "⚡ Hız Modu (Llama 3.1 8B Instant)": "llama-3.1-8b-instant",
+}
+
+MAX_CONTINUATIONS = 4  # Kod kesilirse otomatik olarak kaç kez "devam et" denenecek
+
 
 class SazanAIConception:
     @staticmethod
-    def query_agent(prompt, history, target_lang):
+    def _tek_istek(messages, model):
+        return groq_client.chat.completions.create(
+            model=model,
+            messages=messages,
+            temperature=0.3,
+            top_p=0.9,
+            max_tokens=8000,
+        )
+
+    @staticmethod
+    def query_agent(prompt, history, target_lang, model="llama-3.3-70b-versatile"):
         lowered = prompt.lower()
         if any(k in lowered for k in ["can muhammed çukur", "yapımcın kim", "yapımcısı"]):
             return (
@@ -387,18 +521,30 @@ class SazanAIConception:
                 f"Çukur'dur. Bu siber evrenin her satırını o tasarladı. [Dil: {target_lang}]"
             )
 
+        # Sıkılaştırılmış, kod kalitesine ve eksiksizliğe odaklı sistem promptu
         sys_prompt = (
             "Sen dünyanın en gelişmiş, vizyoner ve kusursuz HTML5 Oyun Mimarı ve Baş Sistem "
             "Mühendisisin. Görevin, kullanıcının isteklerini tam olarak analiz etmek ve tek "
-            "bir HTML dosyası içinde çalışan devasa, profesyonel bir oyun inşa etmektir. "
-            "Senden yeni bir oyun istendiğinde ya da mevcut bir oyuna özellik eklemen "
-            "istendiğinde; bunu en ince detayına kadar düşünülmüş mekaniklerle, gelişmiş CSS "
-            "animasyon ve tasarımlarıyla, derinlemesine yazılmış JavaScript (ES6+) "
-            "algoritmalarıyla yapmalısın. Kod yapısı büyük ölçekli, uzun ve detaylı olmalı; "
-            "asla kısaltma yapma, hiçbir fonksiyonu veya CSS kuralını 'buraları siz doldurun' "
-            "diyerek yarım bırakma. Yazdığın tüm HTML kodunu KESİNLİKLE sadece ve sadece tek "
-            "bir ```html ... ``` kod bloğu içerisine al. Oyun dışındaki analizlerini, "
-            "tebriklerini ve geliştirici notlarını ise kesinlikle şu dilde yap: " + target_lang
+            "bir HTML dosyası içinde çalışan, profesyonel kalitede bir oyun inşa etmektir.\n\n"
+            "KOD KALİTESİ KURALLARI (KESİNLİKLE UYULMALI):\n"
+            "1. Oyun; menü ekranı, oynanış durumu, duraklatma ve 'oyun bitti' ekranlarını içeren "
+            "net bir durum makinesi (state machine) ile yönetilmelidir.\n"
+            "2. JavaScript (ES6+) temiz, okunabilir, mantıksal bölümlere ayrılmış ve kısa "
+            "açıklama yorumları içermelidir. requestAnimationFrame tabanlı düzgün bir oyun "
+            "döngüsü kullan; çerçeve hızından bağımsız hareket (delta time) uygula.\n"
+            "3. Oyun HEM klavye HEM DE dokunmatik/mobil kontrollerle oynanabilir olmalı; canvas "
+            "boyutu pencereye göre duyarlı (responsive) olmalıdır.\n"
+            "4. Kesinlikle hiçbir dış CDN, dış script veya dış görsel/ses linki kullanma; oyun "
+            "tamamen bağımsız, tek dosya içinde ve tamamen offline çalışabilir olmalı (üretilen "
+            "oyun tarayıcıda base64 data-URI olarak açılacağından dış kaynaklar yüklenemez).\n"
+            "5. Görsel öğeler için HTML5 Canvas çizimleri, CSS gradyanları veya basit shape "
+            "çizimleri kullan; hazır resim dosyası isteme.\n"
+            "6. Asla bir fonksiyonu veya CSS kuralını 'buraları siz doldurun' diyerek yarım "
+            "bırakma; kod üretimi uzun sürecek olsa bile eksiksiz ve çalışır durumda bitir.\n"
+            "7. Yazdığın tüm HTML kodunu KESİNLİKLE sadece ve sadece TEK bir "
+            "```html ... ``` kod bloğu içerisine al; kod bloğunun dışına başka kod yazma.\n\n"
+            "Oyun dışındaki analizlerini, tebriklerini ve geliştirici notlarını ise kesinlikle "
+            "şu dilde yaz: " + target_lang
         )
 
         messages = [{"role": "system", "content": sys_prompt}]
@@ -407,13 +553,31 @@ class SazanAIConception:
         messages.append({"role": "user", "content": prompt})
 
         try:
-            res = groq_client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
-                messages=messages,
-                temperature=0.25,
-                max_tokens=8000,
-            )
-            return res.choices[0].message.content
+            res = SazanAIConception._tek_istek(messages, model)
+            combined = res.choices[0].message.content or ""
+            finish_reason = res.choices[0].finish_reason
+
+            # Kod uzunluk limitinden dolayı yarıda kesildiyse, otomatik olarak
+            # "kaldığın yerden devam et" isteği göndererek eksiksiz kodu tamamla.
+            attempts = 0
+            while finish_reason == "length" and attempts < MAX_CONTINUATIONS:
+                messages.append({"role": "assistant", "content": combined})
+                messages.append(
+                    {
+                        "role": "user",
+                        "content": (
+                            "Yanıtın token limiti nedeniyle yarıda kesildi. BAŞTAN BAŞLAMA. "
+                            "Sadece kaldığın satırdan itibaren devam ederek HTML/CSS/JS kodunu "
+                            "eksiksiz şekilde tamamla ve tek ```html``` bloğunu düzgün kapat."
+                        ),
+                    }
+                )
+                res2 = SazanAIConception._tek_istek(messages, model)
+                combined += res2.choices[0].message.content or ""
+                finish_reason = res2.choices[0].finish_reason
+                attempts += 1
+
+            return combined
         except Exception as e:
             return f"⚠️ Oyun Laboratuvarı İletişim Hatası: {e}"
 
@@ -438,6 +602,7 @@ def global_state_enforcer():
         "last_market_update": time.time(),
         "active_lang_code": "Türkçe 🇹🇷",
         "pending_prompt": None,
+        "active_ai_model": "🏆 Kalite Modu (Llama 3.3 70B)",
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -456,7 +621,7 @@ if "username" not in st.session_state:
     )
     st.markdown(
         "<p style='text-align: center; color:#64748b; font-weight:bold;'>"
-        "🛡️ KUANTUM OYUN STÜDYOSU AKTİF (v114.0)</p>",
+        "🛡️ KUANTUM OYUN STÜDYOSU AKTİF (v115.0)</p>",
         unsafe_allow_html=True,
     )
     st.markdown(
@@ -538,6 +703,17 @@ with st.sidebar:
     if st.button("🗑️ Mevcut Akışı Sıfırla", use_container_width=True):
         st.session_state.chat_sessions[st.session_state.current_chat] = []
         st.rerun()
+
+    st.divider()
+    st.markdown("🧠 **Oyun Mimarı Motoru**")
+    st.selectbox(
+        "AI Model Tercihi:",
+        list(AI_MODELS.keys()),
+        key="active_ai_model",
+        label_visibility="collapsed",
+        help="Kalite Modu daha detaylı ve tutarlı kod üretir ama daha yavaştır. "
+        "Hız Modu daha çabuk cevap verir, basit oyunlar için idealdir.",
+    )
 
     st.divider()
     st.markdown("💡 **Hızlı Oyun Şablonları**")
@@ -638,8 +814,15 @@ for idx, m in enumerate(active_messages):
 # =====================================================================
 if st.session_state.active_panel_tab == "plus":
     st.markdown("<div class='stock-market-box'>", unsafe_allow_html=True)
-    t1, t2, t3, t4, t5 = st.tabs(
-        ["🛒 Ekipman Deposu", "🏦 Kasa & Kredi Merkezi", "📊 Finansal Borsa", "⛏️ Kuantum Madencilik", "📚 Oyun Kütüphanem"]
+    t1, t2, t3, t4, t5, t6 = st.tabs(
+        [
+            "🛒 Ekipman Deposu",
+            "🏦 Kasa & Kredi Merkezi",
+            "📊 Finansal Borsa",
+            "⛏️ Kuantum Madencilik",
+            "📚 Oyun Kütüphanem",
+            "🖨️ 3D Baskı Atölyesi",
+        ]
     )
 
     with t1:
@@ -743,6 +926,75 @@ if st.session_state.active_panel_tab == "plus":
                     st.rerun()
             st.markdown("</div>", unsafe_allow_html=True)
 
+    with t6:
+        st.markdown(
+            "🖨️ Bir görsel yükle; Sazan onu gri tonlamalı bir **yükseklik haritasına** "
+            "çevirip 3D yazıcında basabileceğin kapalı (watertight) bir **.stl kabartma "
+            "modeli** üretsin. Bu teknik bir *lityofan/rölyef* dönüşümüdür — görseli tam "
+            "bir 3D nesneye değil, kabartmalı bir yüzeye çevirir."
+        )
+
+        uploaded_img = st.file_uploader(
+            "Görsel Yükle (PNG / JPG)", type=["png", "jpg", "jpeg"], key="stl_uploader"
+        )
+
+        if uploaded_img is not None:
+            pil_image = Image.open(uploaded_img)
+            col_prev, col_opts = st.columns([1, 1.3])
+
+            with col_prev:
+                st.image(pil_image, caption="Yüklenen Görsel", use_container_width=True)
+
+            with col_opts:
+                boyut_mm = st.slider("Genişlik/Uzunluk (mm)", 30, 200, 80, step=5)
+                taban_mm = st.slider("Taban Kalınlığı (mm)", 0.5, 5.0, 2.0, step=0.5)
+                rolyef_mm = st.slider("Kabartma Yüksekliği (mm)", 1.0, 15.0, 5.0, step=0.5)
+                cozunurluk = st.slider(
+                    "Çözünürlük (piksel, yüksek = daha detaylı ama daha ağır dosya)",
+                    30,
+                    SazanPrintStudio.MAX_RESOLUTION_PX,
+                    120,
+                    step=10,
+                )
+                ters_cevir = st.checkbox(
+                    "Tonları Ters Çevir (koyu alanlar daha yüksek olsun)", value=False
+                )
+
+            if st.button("🧊 STL Modelini Oluştur", use_container_width=True, type="primary"):
+                with st.spinner("Yükseklik haritası ve 3D örgü (mesh) hesaplanıyor..."):
+                    try:
+                        max_w = max(pil_image.width, pil_image.height)
+                        pixel_size_mm = boyut_mm / min(cozunurluk, max_w)
+                        stl_bytes, info = SazanPrintStudio.generate_stl_from_image(
+                            pil_image,
+                            max_size_px=cozunurluk,
+                            base_height_mm=taban_mm,
+                            relief_height_mm=rolyef_mm,
+                            pixel_size_mm=pixel_size_mm,
+                            invert=ters_cevir,
+                        )
+                        w_mm, d_mm, h_mm = info["boyut_mm"]
+                        st.success(
+                            f"✅ Model hazır! Boyut: {w_mm} x {d_mm} x {h_mm} mm | "
+                            f"Üçgen sayısı: {info['triangles']:,} | "
+                            f"Çözünürlük: {info['resolution'][0]}x{info['resolution'][1]} px"
+                        )
+                        st.download_button(
+                            "⬇️ .stl Dosyasını İndir",
+                            data=stl_bytes,
+                            file_name=f"sazan_3d_model_{uuid.uuid4().hex[:6]}.stl",
+                            mime="model/stl",
+                            use_container_width=True,
+                        )
+                        st.caption(
+                            "İndirdiğin .stl dosyasını Cura, PrusaSlicer veya Bambu Studio gibi "
+                            "bir dilimleyici (slicer) programına yükleyip 3D yazıcına gönderebilirsin."
+                        )
+                    except Exception as e:
+                        st.error(f"⚠️ Model üretilirken hata oluştu: {e}")
+        else:
+            st.info("Başlamak için yukarıdan bir görsel yükle.")
+
     st.markdown("</div>", unsafe_allow_html=True)
 
 # =====================================================================
@@ -776,7 +1028,11 @@ if prompt:
 
     with st.spinner("Sazan Kuantum Oyun Mimarı devasa kodları inşa ediyor... Lütfen bekleyin..."):
         cur_lang = st.session_state.get("active_lang_code", "Türkçe 🇹🇷")
-        ans = SazanAIConception.query_agent(prompt, active_messages, cur_lang)
+        cur_model = AI_MODELS.get(
+            st.session_state.get("active_ai_model", "🏆 Kalite Modu (Llama 3.3 70B)"),
+            "llama-3.3-70b-versatile",
+        )
+        ans = SazanAIConception.query_agent(prompt, active_messages, cur_lang, model=cur_model)
         active_messages.append({"role": "assistant", "content": ans})
 
         html_blocks = re.findall(r"```html\s*(.*?)\s*```", ans, re.DOTALL)
