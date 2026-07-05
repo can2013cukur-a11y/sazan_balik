@@ -5,7 +5,7 @@
 # ╚════██║██╔══██║ ███╔╝  ██╔══██║██║╚██╗██║     ██║   ██║╚════██║
 # ███████║██║  ██║███████╗██║  ██║██║ ╚████║     ╚██████╔╝███████║
 # ╚══════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝      ╚═════╝ ╚══════╝
-#        👑 SAZAN AI ENTERPRISE STUDIO - GAME ENGINE SUPREME v115.0 👑
+#        👑 SAZAN AI ENTERPRISE STUDIO - GAME ENGINE SUPREME v116.0 👑
 #        DEVELOPED BY: CAN MUHAMMED ÇUKUR - THE MUTLAK ARCHITECT
 #        PATCH NOTE: KESİNTİSİZ KOD ÜRETİMİ + MODEL SEÇİMİ + GÖRSELDEN 3D BASKI (STL) ATÖLYESİ
 # ================================================================================
@@ -35,7 +35,7 @@ if "sidebar_state" not in st.session_state:
     st.session_state.sidebar_state = "expanded"
 
 st.set_page_config(
-    page_title="Sazan AI Enterprise Game Overlord v115.0",
+    page_title="Sazan AI Enterprise Game Overlord v116.0",
     page_icon="👑",
     layout="wide",
     initial_sidebar_state=st.session_state.sidebar_state,
@@ -125,6 +125,80 @@ st.markdown(
         display: inline-block; padding: 3px 10px; border-radius: 8px;
         background: #0e1626; border: 1px solid #334155; font-size: 0.78rem;
         color: #38bdf8; margin-right: 6px;
+    }
+
+    /* --- v115 COOL UI UPGRADE --- */
+    @keyframes sazanGradientShift {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+    @keyframes sazanGlowPulse {
+        0%, 100% { box-shadow: 0 0 18px rgba(6, 182, 212, 0.35); }
+        50% { box-shadow: 0 0 32px rgba(59, 130, 246, 0.65); }
+    }
+    @keyframes sazanFadeInUp {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .sazan-hero {
+        text-align: center;
+        padding: 22px 10px 14px 10px;
+        animation: sazanFadeInUp 0.5s ease-out;
+    }
+    .sazan-hero h1 {
+        font-size: 2.1rem;
+        font-weight: 800;
+        margin: 0;
+        background: linear-gradient(90deg, #22d3ee, #3b82f6, #a855f7, #22d3ee);
+        background-size: 300% 300%;
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        animation: sazanGradientShift 6s ease infinite;
+        letter-spacing: 1px;
+    }
+    .sazan-hero p {
+        color: #94a3b8;
+        font-size: 0.92rem;
+        margin-top: 6px;
+        font-weight: 500;
+    }
+
+    .print-studio-box {
+        background: linear-gradient(160deg, #0b1120 0%, #090f21 100%);
+        border: 1px solid #22d3ee;
+        padding: 24px;
+        border-radius: 18px;
+        margin-bottom: 18px;
+        animation: sazanGlowPulse 3.5s ease-in-out infinite, sazanFadeInUp 0.4s ease-out;
+    }
+
+    /* Streamlit butonlarına hover parlaması ve hafif kalkma efekti */
+    .stButton > button {
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        border-radius: 12px !important;
+    }
+    .stButton > button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 18px -4px rgba(6, 182, 212, 0.45) !important;
+        border-color: #22d3ee !important;
+    }
+
+    /* Dosya yükleme kutusuna vurgulu, dikkat çekici bir çerçeve */
+    [data-testid="stFileUploaderDropzone"] {
+        border: 2px dashed #22d3ee !important;
+        background-color: #071019 !important;
+        border-radius: 14px !important;
+    }
+
+    .library-card, .stock-market-box, .rpg-terminal-box, .print-studio-box {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .library-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 22px -6px rgba(56, 189, 248, 0.35);
     }
     </style>
     """,
@@ -493,9 +567,16 @@ if "GROQ_API_KEY" not in st.secrets:
 groq_client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
 # Kalite/hız tercihine göre seçilebilecek modeller
+# ÖNEMLİ: Groq, 17 Haziran 2026'da llama-3.3-70b-versatile ve llama-3.1-8b-instant
+# modellerinin kullanımdan kaldırılacağını duyurdu; bu modeller Ağustos 2026 itibarıyla
+# tamamen kapatılıyor. Bu yüzden varsayılan model listesi Groq'un önerdiği güncel
+# modellere (openai/gpt-oss ailesi ve qwen3.6) taşındı. Groq hesabından hangi
+# modellerin aktif olduğunu https://console.groq.com/docs/models üzerinden kontrol edebilirsin.
 AI_MODELS = {
-    "🏆 Kalite Modu (Llama 3.3 70B)": "llama-3.3-70b-versatile",
-    "⚡ Hız Modu (Llama 3.1 8B Instant)": "llama-3.1-8b-instant",
+    "🏆 Kalite Modu (GPT-OSS 120B)": "openai/gpt-oss-120b",
+    "⚡ Hız Modu (GPT-OSS 20B)": "openai/gpt-oss-20b",
+    "🧠 Derin Düşünce (Qwen3.6 27B)": "qwen/qwen3.6-27b",
+    "🗄️ Klasik (Llama 3.3 70B - yakında kapanacak)": "llama-3.3-70b-versatile",
 }
 
 MAX_CONTINUATIONS = 4  # Kod kesilirse otomatik olarak kaç kez "devam et" denenecek
@@ -513,7 +594,7 @@ class SazanAIConception:
         )
 
     @staticmethod
-    def query_agent(prompt, history, target_lang, model="llama-3.3-70b-versatile"):
+    def query_agent(prompt, history, target_lang, model="openai/gpt-oss-120b"):
         lowered = prompt.lower()
         if any(k in lowered for k in ["can muhammed çukur", "yapımcın kim", "yapımcısı"]):
             return (
@@ -579,6 +660,13 @@ class SazanAIConception:
 
             return combined
         except Exception as e:
+            err_text = str(e).lower()
+            if "decommission" in err_text or "deprecat" in err_text or "not found" in err_text:
+                return (
+                    "⚠️ Seçtiğin AI modeli Groq tarafından kaldırılmış görünüyor. "
+                    "Lütfen sol menüden **'🧠 Oyun Mimarı Motoru'** kısmından farklı bir "
+                    f"model seç ve tekrar dene.\n\n(Teknik detay: {e})"
+                )
             return f"⚠️ Oyun Laboratuvarı İletişim Hatası: {e}"
 
 
@@ -602,7 +690,8 @@ def global_state_enforcer():
         "last_market_update": time.time(),
         "active_lang_code": "Türkçe 🇹🇷",
         "pending_prompt": None,
-        "active_ai_model": "🏆 Kalite Modu (Llama 3.3 70B)",
+        "active_ai_model": "🏆 Kalite Modu (GPT-OSS 120B)",
+        "print_studio_status": False,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -621,7 +710,7 @@ if "username" not in st.session_state:
     )
     st.markdown(
         "<p style='text-align: center; color:#64748b; font-weight:bold;'>"
-        "🛡️ KUANTUM OYUN STÜDYOSU AKTİF (v115.0)</p>",
+        "🛡️ KUANTUM OYUN STÜDYOSU AKTİF (v116.0)</p>",
         unsafe_allow_html=True,
     )
     st.markdown(
@@ -726,6 +815,16 @@ with st.sidebar:
 # 10. ANA GÖSTERİM TERMİNALİ (SOHBET AKIŞI & OYUN YAKALAYICI)
 # =====================================================================
 st.markdown(
+    """
+    <div class='sazan-hero'>
+        <h1>🐟 SAZAN AI ENTERPRISE STUDIO</h1>
+        <p>Kuantum Oyun Mimarı · Ekonomi Motoru · Siber Arena · 3D Baskı Atölyesi</p>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+st.markdown(
     f"<p style='color:#64748b; font-size:0.9rem; font-weight:700; letter-spacing:1px;'>"
     f"🛠️ AKTİF OYUN PROJE HATTI: {st.session_state.current_chat}</p>",
     unsafe_allow_html=True,
@@ -814,14 +913,13 @@ for idx, m in enumerate(active_messages):
 # =====================================================================
 if st.session_state.active_panel_tab == "plus":
     st.markdown("<div class='stock-market-box'>", unsafe_allow_html=True)
-    t1, t2, t3, t4, t5, t6 = st.tabs(
+    t1, t2, t3, t4, t5 = st.tabs(
         [
             "🛒 Ekipman Deposu",
             "🏦 Kasa & Kredi Merkezi",
             "📊 Finansal Borsa",
             "⛏️ Kuantum Madencilik",
             "📚 Oyun Kütüphanem",
-            "🖨️ 3D Baskı Atölyesi",
         ]
     )
 
@@ -926,82 +1024,90 @@ if st.session_state.active_panel_tab == "plus":
                     st.rerun()
             st.markdown("</div>", unsafe_allow_html=True)
 
-    with t6:
-        st.markdown(
-            "🖨️ Bir görsel yükle; Sazan onu gri tonlamalı bir **yükseklik haritasına** "
-            "çevirip 3D yazıcında basabileceğin kapalı (watertight) bir **.stl kabartma "
-            "modeli** üretsin. Bu teknik bir *lityofan/rölyef* dönüşümüdür — görseli tam "
-            "bir 3D nesneye değil, kabartmalı bir yüzeye çevirir."
-        )
+    st.markdown("</div>", unsafe_allow_html=True)
 
-        uploaded_img = st.file_uploader(
-            "Görsel Yükle (PNG / JPG)", type=["png", "jpg", "jpeg"], key="stl_uploader"
-        )
+# =====================================================================
+# 11.5. 🖨️ 3D BASKI ATÖLYESİ (BAĞIMSIZ, GÖZE ÇARPAN PANEL)
+# =====================================================================
+if st.session_state.get("print_studio_status", False):
+    st.markdown("<div class='print-studio-box'>", unsafe_allow_html=True)
+    st.markdown("<h4>🖨️ 3D BASKI ATÖLYESİ — GÖRSELDEN STL ÜRETİCİ</h4>", unsafe_allow_html=True)
+    st.markdown(
+        "Bir görsel yükle; Sazan onu gri tonlamalı bir **yükseklik haritasına** çevirip "
+        "3D yazıcında basabileceğin kapalı (watertight) bir **.stl kabartma modeli** üretsin. "
+        "Bu teknik bir *lityofan/rölyef* dönüşümüdür — görseli tam bir 3D nesneye değil, "
+        "kabartmalı bir yüzeye çevirir. Portre, logo, harita gibi görsellerde en iyi sonucu verir."
+    )
 
-        if uploaded_img is not None:
-            pil_image = Image.open(uploaded_img)
-            col_prev, col_opts = st.columns([1, 1.3])
+    uploaded_img = st.file_uploader(
+        "📤 Görsel Yükle (PNG / JPG / JPEG) — Buraya tıkla veya sürükle-bırak",
+        type=["png", "jpg", "jpeg"],
+        key="stl_uploader",
+    )
 
-            with col_prev:
-                st.image(pil_image, caption="Yüklenen Görsel", use_container_width=True)
+    if uploaded_img is not None:
+        pil_image = Image.open(uploaded_img)
+        col_prev, col_opts = st.columns([1, 1.3])
 
-            with col_opts:
-                boyut_mm = st.slider("Genişlik/Uzunluk (mm)", 30, 200, 80, step=5)
-                taban_mm = st.slider("Taban Kalınlığı (mm)", 0.5, 5.0, 2.0, step=0.5)
-                rolyef_mm = st.slider("Kabartma Yüksekliği (mm)", 1.0, 15.0, 5.0, step=0.5)
-                cozunurluk = st.slider(
-                    "Çözünürlük (piksel, yüksek = daha detaylı ama daha ağır dosya)",
-                    30,
-                    SazanPrintStudio.MAX_RESOLUTION_PX,
-                    120,
-                    step=10,
-                )
-                ters_cevir = st.checkbox(
-                    "Tonları Ters Çevir (koyu alanlar daha yüksek olsun)", value=False
-                )
+        with col_prev:
+            st.image(pil_image, caption="Yüklenen Görsel", use_container_width=True)
 
-            if st.button("🧊 STL Modelini Oluştur", use_container_width=True, type="primary"):
-                with st.spinner("Yükseklik haritası ve 3D örgü (mesh) hesaplanıyor..."):
-                    try:
-                        max_w = max(pil_image.width, pil_image.height)
-                        pixel_size_mm = boyut_mm / min(cozunurluk, max_w)
-                        stl_bytes, info = SazanPrintStudio.generate_stl_from_image(
-                            pil_image,
-                            max_size_px=cozunurluk,
-                            base_height_mm=taban_mm,
-                            relief_height_mm=rolyef_mm,
-                            pixel_size_mm=pixel_size_mm,
-                            invert=ters_cevir,
-                        )
-                        w_mm, d_mm, h_mm = info["boyut_mm"]
-                        st.success(
-                            f"✅ Model hazır! Boyut: {w_mm} x {d_mm} x {h_mm} mm | "
-                            f"Üçgen sayısı: {info['triangles']:,} | "
-                            f"Çözünürlük: {info['resolution'][0]}x{info['resolution'][1]} px"
-                        )
-                        st.download_button(
-                            "⬇️ .stl Dosyasını İndir",
-                            data=stl_bytes,
-                            file_name=f"sazan_3d_model_{uuid.uuid4().hex[:6]}.stl",
-                            mime="model/stl",
-                            use_container_width=True,
-                        )
-                        st.caption(
-                            "İndirdiğin .stl dosyasını Cura, PrusaSlicer veya Bambu Studio gibi "
-                            "bir dilimleyici (slicer) programına yükleyip 3D yazıcına gönderebilirsin."
-                        )
-                    except Exception as e:
-                        st.error(f"⚠️ Model üretilirken hata oluştu: {e}")
-        else:
-            st.info("Başlamak için yukarıdan bir görsel yükle.")
+        with col_opts:
+            boyut_mm = st.slider("Genişlik/Uzunluk (mm)", 30, 200, 80, step=5)
+            taban_mm = st.slider("Taban Kalınlığı (mm)", 0.5, 5.0, 2.0, step=0.5)
+            rolyef_mm = st.slider("Kabartma Yüksekliği (mm)", 1.0, 15.0, 5.0, step=0.5)
+            cozunurluk = st.slider(
+                "Çözünürlük (piksel, yüksek = daha detaylı ama daha ağır dosya)",
+                30,
+                SazanPrintStudio.MAX_RESOLUTION_PX,
+                120,
+                step=10,
+            )
+            ters_cevir = st.checkbox(
+                "Tonları Ters Çevir (koyu alanlar daha yüksek olsun)", value=False
+            )
 
+        if st.button("🧊 STL Modelini Oluştur", use_container_width=True, type="primary"):
+            with st.spinner("Yükseklik haritası ve 3D örgü (mesh) hesaplanıyor..."):
+                try:
+                    max_w = max(pil_image.width, pil_image.height)
+                    pixel_size_mm = boyut_mm / min(cozunurluk, max_w)
+                    stl_bytes, info = SazanPrintStudio.generate_stl_from_image(
+                        pil_image,
+                        max_size_px=cozunurluk,
+                        base_height_mm=taban_mm,
+                        relief_height_mm=rolyef_mm,
+                        pixel_size_mm=pixel_size_mm,
+                        invert=ters_cevir,
+                    )
+                    w_mm, d_mm, h_mm = info["boyut_mm"]
+                    st.success(
+                        f"✅ Model hazır! Boyut: {w_mm} x {d_mm} x {h_mm} mm | "
+                        f"Üçgen sayısı: {info['triangles']:,} | "
+                        f"Çözünürlük: {info['resolution'][0]}x{info['resolution'][1]} px"
+                    )
+                    st.download_button(
+                        "⬇️ .stl Dosyasını İndir",
+                        data=stl_bytes,
+                        file_name=f"sazan_3d_model_{uuid.uuid4().hex[:6]}.stl",
+                        mime="model/stl",
+                        use_container_width=True,
+                    )
+                    st.caption(
+                        "İndirdiğin .stl dosyasını Cura, PrusaSlicer veya Bambu Studio gibi "
+                        "bir dilimleyici (slicer) programına yükleyip 3D yazıcına gönderebilirsin."
+                    )
+                except Exception as e:
+                    st.error(f"⚠️ Model üretilirken hata oluştu: {e}")
+    else:
+        st.info("👆 Başlamak için yukarıdaki kutuya tıklayıp bir görsel yükle.")
     st.markdown("</div>", unsafe_allow_html=True)
 
 # =====================================================================
 # 12. HUD KONTROLLERİ (HIZLI ERİŞİM MENÜSÜ)
 # =====================================================================
 st.markdown("<div style='height: 15px;'></div>", unsafe_allow_html=True)
-hc1, hc2, _ = st.columns([1.5, 1.2, 7.3])
+hc1, hc2, hc3, _ = st.columns([1.5, 1.2, 1.5, 6.1])
 with hc1:
     if st.button("💼 Finans, Stüdyo & Maden", use_container_width=True):
         st.session_state.active_panel_tab = "plus" if st.session_state.active_panel_tab != "plus" else None
@@ -1009,6 +1115,10 @@ with hc1:
 with hc2:
     if st.button("🛡️ Siber Arena (RPG)", use_container_width=True):
         st.session_state.dungeon_status = not st.session_state.dungeon_status
+        st.rerun()
+with hc3:
+    if st.button("🖨️ 3D Baskı Atölyesi", use_container_width=True, type="primary"):
+        st.session_state.print_studio_status = not st.session_state.get("print_studio_status", False)
         st.rerun()
 
 # =====================================================================
@@ -1029,8 +1139,8 @@ if prompt:
     with st.spinner("Sazan Kuantum Oyun Mimarı devasa kodları inşa ediyor... Lütfen bekleyin..."):
         cur_lang = st.session_state.get("active_lang_code", "Türkçe 🇹🇷")
         cur_model = AI_MODELS.get(
-            st.session_state.get("active_ai_model", "🏆 Kalite Modu (Llama 3.3 70B)"),
-            "llama-3.3-70b-versatile",
+            st.session_state.get("active_ai_model", "🏆 Kalite Modu (GPT-OSS 120B)"),
+            "openai/gpt-oss-120b",
         )
         ans = SazanAIConception.query_agent(prompt, active_messages, cur_lang, model=cur_model)
         active_messages.append({"role": "assistant", "content": ans})
