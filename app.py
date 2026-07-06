@@ -29,7 +29,15 @@ from groq import Groq
 
 # "Beni hatırla" özelliği için tarayıcı çerezi yöneticisi.
 # requirements.txt dosyana şunu eklemen gerekir:  extra-streamlit-components
-import extra_streamlit_components as stx
+# NOT: Bu kütüphane requirements.txt'de yoksa veya Streamlit Cloud henüz kurmadıysa
+# uygulamanın tamamen çökmemesi için import'u güvenli hale getiriyoruz. Eksikse
+# "beni hatırla" özelliği sessizce devre dışı kalır, geri kalan her şey çalışmaya devam eder.
+try:
+    import extra_streamlit_components as stx
+    _COOKIE_LIB_VAR = True
+except ModuleNotFoundError:
+    stx = None
+    _COOKIE_LIB_VAR = False
 
 # =====================================================================
 # 1. SAYFA AYARLARI
@@ -957,8 +965,26 @@ class SazanPrintStudio:
 # =====================================================================
 # 9. ÇEREZ (COOKIE) YÖNETİCİSİ — "BENİ HATIRLA" İÇİN
 # =====================================================================
+class _NoOpCookieManager:
+    """extra_streamlit_components kurulu değilse kullanılan sahte (no-op) çerez
+    yöneticisi. Böylece 'beni hatırla' özelliği sessizce kapanır ama app.py
+    ModuleNotFoundError ile çökmez; get() her zaman None döner, set/delete hiçbir
+    şey yapmaz."""
+
+    def get(self, *args, **kwargs):
+        return None
+
+    def set(self, *args, **kwargs):
+        return None
+
+    def delete(self, *args, **kwargs):
+        return None
+
+
 @st.cache_resource
 def get_cookie_manager():
+    if not _COOKIE_LIB_VAR:
+        return _NoOpCookieManager()
     return stx.CookieManager(key="sazan_cookie_manager")
 
 
@@ -1050,6 +1076,15 @@ if not is_member and not is_guest:
                 "3D baskı atölyesini açarsın. İstersen misafir olarak da göz atabilirsin.</p>",
                 unsafe_allow_html=True,
             )
+
+            if not _COOKIE_LIB_VAR:
+                st.caption(
+                    "ℹ️ 'Bu cihazda beni hatırla' özelliği şu an kapalı görünüyor çünkü "
+                    "`extra-streamlit-components` kütüphanesi sunucuda kurulu değil. "
+                    "Bunu düzeltmek için GitHub deponuzdaki requirements.txt dosyasına "
+                    "`extra-streamlit-components` satırını ekleyip yeniden deploy edin. "
+                    "Diğer tüm özellikler (sohbet, görsel üretim, 3D baskı) normal çalışır."
+                )
 
             tab_login, tab_signup = st.tabs(["➡️ Giriş Yap", "🆕 Hesap Oluştur"])
 
