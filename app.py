@@ -1,8 +1,10 @@
 # ================================================================================
-#   🐟  S A Z A N   A I   —   v120.0  "AURORA"
+#   🐟  S A Z A N   A I   —   v121.0  "AURORA+"
 #   Modern, Gemini esintili sohbet deneyimi.
 #   Ekonomi / bakiye / RPG sistemleri tamamen kaldırıldı.
 #   Misafir: sohbet + tek sabit model. Üye: 7 model + görsel üretimi + 3D baskı.
+#   YENİ: "Bu cihazda beni hatırla" (isteğe bağlı çerez girişi) + "Okudum, onaylıyorum"
+#         (telif hakkı sorumluluğu) kutusu + daha güvenilir güncel bilgi araması.
 # ================================================================================
 
 import streamlit as st
@@ -17,13 +19,17 @@ import hashlib
 import io
 import urllib.request
 import urllib.parse
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import numpy as np
 from PIL import Image
 from stl import mesh as stl_mesh
 
 from groq import Groq
+
+# "Beni hatırla" özelliği için tarayıcı çerezi yöneticisi.
+# requirements.txt dosyana şunu eklemen gerekir:  extra-streamlit-components
+import extra_streamlit_components as stx
 
 # =====================================================================
 # 1. SAYFA AYARLARI
@@ -254,6 +260,11 @@ CHATS_FILE = os.path.join(DATA_DIR, "sazan_chats.json")
 GAMES_LIBRARY_FILE = os.path.join(DATA_DIR, "sazan_games_library.json")
 IMAGE_GALLERY_FILE = os.path.join(DATA_DIR, "sazan_image_gallery.json")
 
+# "Beni hatırla" çerezlerinin isimleri ve geçerlilik süresi (gün)
+REMEMBER_EMAIL_COOKIE = "sazan_remember_email"
+REMEMBER_TOKEN_COOKIE = "sazan_remember_token"
+REMEMBER_DAYS = 30
+
 
 class SazanStore:
     @staticmethod
@@ -305,8 +316,24 @@ IMAGE_STYLE_PRESETS = {
     "✏️ Anime / Manga": "anime style, manga illustration, cel shaded, vibrant, studio quality",
 }
 
+# Kullanıcının, ürettiği içeriklerin telif hakkı sorumluluğunun kendisine ait
+# olduğunu onaylamasını istediğimiz metin. Giriş / kayıt ekranında gösterilir.
+TELIF_ONAY_METNI = """
+**Kullanım Şartları ve Telif Hakkı Bildirimi**
+
+- Sazan AI ile ürettiğiniz tüm içeriklerin (metin, kod, oyun, görsel, 3D model) kullanım,
+  paylaşım ve **telif hakkı sorumluluğu tamamen size (kullanıcıya) aittir.**
+- Sazan AI; görsel üretiminde üçüncü taraf servisler, metin üretiminde ise büyük dil
+  modelleri kullanır. Üretilen içerik bazen hatalı, güncel olmayan veya yanıltıcı olabilir;
+  önemli kararlar almadan önce bilgiyi doğrulamanız önerilir.
+- Telif hakkıyla korunan (marka, karakter, ünlü kişi, şarkı sözü vb.) içerik üretimi talep
+  etmek ve bu içeriği kullanmak sizin sorumluluğunuzdadır.
+- Bu kutuyu işaretleyerek yukarıdaki maddeleri okuduğunuzu ve kabul ettiğinizi beyan
+  edersiniz.
+"""
+
 # =====================================================================
-# 4. KİMLİK DOĞRULAMA (GMAIL + ŞİFRE)
+# 4. KİMLİK DOĞRULAMA (GMAIL + ŞİFRE + "BENİ HATIRLA")
 # =====================================================================
 GMAIL_REGEX = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9._%+-]*[A-Za-z0-9])?@gmail\.com$", re.IGNORECASE)
 
@@ -341,6 +368,8 @@ class SazanAuth:
             "salt": salt,
             "password_hash": SazanAuth._hash(password, salt),
             "created_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
+            "remember_salt": None,
+            "remember_token_hash": None,
         }
         SazanAuth._save(db)
 
@@ -350,6 +379,44 @@ class SazanAuth:
         if not rec:
             return False
         return SazanAuth._hash(password, rec["salt"]) == rec["password_hash"]
+
+    # ---------- "BU CİHAZDA BENİ HATIRLA" (isteğe bağlı) ----------
+    @staticmethod
+    def create_remember_token(email: str) -> str:
+        """Kullanıcı 'beni hatırla' kutusunu işaretlediyse çağrılır.
+        Şifreyi ASLA çereze yazmayız; bunun yerine rastgele, tek kullanımlık bir
+        'hatırlama token'ı üretip sadece bu token'ın HASH'ini veritabanına yazarız.
+        Ham token, tarayıcı çerezine yazılmak üzere geri döner."""
+        db = SazanAuth._load()
+        key = email.strip().lower()
+        if key not in db:
+            return ""
+        raw_token = uuid.uuid4().hex + uuid.uuid4().hex
+        remember_salt = uuid.uuid4().hex
+        db[key]["remember_salt"] = remember_salt
+        db[key]["remember_token_hash"] = SazanAuth._hash(raw_token, remember_salt)
+        SazanAuth._save(db)
+        return raw_token
+
+    @staticmethod
+    def verify_remember_token(email: str, raw_token: str) -> bool:
+        if not email or not raw_token:
+            return False
+        rec = SazanAuth._load().get(email.strip().lower())
+        if not rec or not rec.get("remember_token_hash") or not rec.get("remember_salt"):
+            return False
+        return SazanAuth._hash(raw_token, rec["remember_salt"]) == rec["remember_token_hash"]
+
+    @staticmethod
+    def clear_remember_token(email: str):
+        """Kullanıcı 'çıkış yap' derse veya 'beni hatırla'yı iptal ederse
+        cihazdaki eski token'ı geçersiz kılmak için sunucu tarafındaki hash'i siler."""
+        db = SazanAuth._load()
+        key = (email or "").strip().lower()
+        if key in db:
+            db[key]["remember_salt"] = None
+            db[key]["remember_token_hash"] = None
+            SazanAuth._save(db)
 
 
 # =====================================================================
@@ -497,10 +564,43 @@ AI_MODELS = {
 # Uygulamanın "bugün" olarak bildiği tarih — modelin eski eğitim verisine değil,
 # bu tarihe ve (varsa) canlı arama sonuçlarına güvenmesi için sistem promptuna eklenir.
 SAZAN_TODAY_STR = datetime.now().strftime("%d %B %Y")
+SAZAN_TODAY_YEAR = datetime.now().strftime("%Y")
 
 MAX_CONTINUATIONS = 4
 DEFAULT_MAX_TOKENS = 3000  # TPM limitine takılmamak için ölçülü tutuluyor (continuation ile tamamlanır)
+SEARCH_MAX_TOKENS = 4000   # Arama sonuçlarını kaynak/tarihiyle birlikte özetleyebilmek için biraz daha geniş pay
 MIN_MAX_TOKENS = 700
+
+# Bu kelimelerden biri sorguda geçiyorsa, model "arama yapayım mı yapmayayım mı" diye
+# tereddüt etmesin diye web aramasını ZORUNLU (tool_choice="required") hale getiriyoruz.
+# "auto" bırakıldığında modeller genelde arama yapmadan eski bilgiyle uydurma yanıt
+# verebiliyordu — bu, kullanıcının şikayet ettiği "saçma/yanlış güncel bilgi" sorununu çözer.
+GUNCEL_BILGI_ANAHTAR_KELIMELER = [
+    "güncel", "bugün", "bu yıl", "bu ay", "bu hafta", "geçen hafta", "geçen ay",
+    "2023", "2024", "2025", "2026", "2027", "2028",
+    "kadro", "kadrosu", "transfer", "skor", "maç sonucu", "puan durumu",
+    "şampiyon", "final", "sonuç", "haberi", "haber", "son dakika", "gündem",
+    "kim oldu", "kimdir", "kaç yaşında", "fiyat", "fiyatı", "ne kadar", "kaç para",
+    "hava durumu", "döviz", "kur", "borsa", "altın fiyatı", "bitcoin",
+    "cumhurbaşkanı", "başkan", "başbakan", "bakan", "ceo", "genel müdür",
+    "hangi ülke", "nerede oynuyor", "en son", "yeni çıkan", "yeni model",
+    "sürüm", "versiyon", "release", "şu an", "canlı", "az önce", "yakın zamanda",
+    "hala", "hâlâ", "mı çıktı", "mi çıktı", "var mı", "kim kazandı", "ne zaman",
+    "kim öldü", "vefat", "istifa", "seçim", "seçildi", "açıklandı", "duyuruldu",
+]
+
+# Türkçe büyük/küçük harf normalizasyonu (İ/I, ı/i vb.) casefold ile birebir
+# çalışmadığı için anahtar kelime taramasını daha güvenilir hale getiren yardımcı.
+_TR_CASEFOLD_MAP = str.maketrans({"İ": "i", "I": "ı", "Ş": "ş", "Ğ": "ğ", "Ü": "ü", "Ö": "ö", "Ç": "ç"})
+
+
+def _tr_normalize(text: str) -> str:
+    return (text or "").translate(_TR_CASEFOLD_MAP).casefold()
+
+
+def _guncel_bilgi_sorusu_mu(prompt: str) -> bool:
+    lowered = _tr_normalize(prompt)
+    return any(_tr_normalize(k) in lowered for k in GUNCEL_BILGI_ANAHTAR_KELIMELER)
 
 
 def _kisalt_gecmis_icerik(content, limit_chars=600):
@@ -515,7 +615,7 @@ def _kisalt_gecmis_icerik(content, limit_chars=600):
 
 class SazanAIConception:
     @staticmethod
-    def _tek_istek(messages, model_cfg, max_tokens=DEFAULT_MAX_TOKENS):
+    def _tek_istek(messages, model_cfg, max_tokens=DEFAULT_MAX_TOKENS, force_search=False):
         kwargs = dict(
             model=model_cfg["id"],
             messages=messages,
@@ -530,13 +630,21 @@ class SazanAIConception:
             # Model, güncel/gerçek dünya bilgisi gerektiğinde otomatik olarak
             # canlı web araması yapabilsin diye built-in browser_search aracı tanımlanır.
             kwargs["tools"] = [{"type": "browser_search"}]
-            kwargs["tool_choice"] = "auto"
+            # Anahtar kelime tespit edildiyse arama ZORUNLU, aksi halde modele bırakılır.
+            kwargs["tool_choice"] = "required" if force_search else "auto"
         try:
             return groq_client.chat.completions.create(**kwargs)
         except Exception as e:
             err_text = str(e).lower()
-            if "tool" in err_text and ("support" in err_text or "unsupported" in err_text):
-                # Bu model/servis katmanı browser_search'ü desteklemiyor olabilir — onsuz tekrar dene
+            if "tool" in err_text and ("support" in err_text or "unsupported" in err_text or "choice" in err_text):
+                # Bu model/servis katmanı browser_search'ü veya "required" seçimini
+                # desteklemiyor olabilir — önce "auto" ile, olmazsa hiç tool olmadan dene.
+                if kwargs.get("tool_choice") == "required":
+                    kwargs["tool_choice"] = "auto"
+                    try:
+                        return groq_client.chat.completions.create(**kwargs)
+                    except Exception:
+                        pass
                 kwargs.pop("tools", None)
                 kwargs.pop("tool_choice", None)
                 try:
@@ -556,6 +664,20 @@ class SazanAIConception:
             raise
 
     @staticmethod
+    def _yanit_arama_izi_tasiyor_mu(cevap: str) -> bool:
+        """Zorunlu arama istendiği halde model gerçekten arama yapıp kaynağa
+        dayanmış mı, yoksa yine ezberinden mi yazmış — kaba bir kontrol.
+        Kaynak/tarih/link göstergesi yoksa ikinci bir zorunlu-arama denemesi yaparız."""
+        if not cevap:
+            return False
+        gosterge_kelimeler = [
+            "kaynak", "http", "www.", ".com", ".com.tr", "tarihli", "haberine göre",
+            "göre,", "sitesine göre", "verilerine göre", "güncellendi",
+        ]
+        lowered = _tr_normalize(cevap)
+        return any(_tr_normalize(g) in lowered for g in gosterge_kelimeler)
+
+    @staticmethod
     def query_agent(prompt, history, target_lang, model_cfg):
         lowered = prompt.lower()
         if any(k in lowered for k in ["can muhammed çukur", "yapımcın kim", "yapımcısı", "kim yaptı"]):
@@ -564,18 +686,41 @@ class SazanAIConception:
                 f"[Yanıt dili: {target_lang}]"
             )
 
+        force_search = model_cfg.get("web_search", False) and _guncel_bilgi_sorusu_mu(prompt)
+        max_tokens_bu_istek = SEARCH_MAX_TOKENS if force_search else DEFAULT_MAX_TOKENS
+
         sys_prompt = (
             "Sen Sazan AI adında, sıcak, net ve yardımsever genel amaçlı bir yapay zeka "
             "asistanısın. Kullanıcıyla doğal bir sohbet dilinde konuş, sorularını dikkatle "
             "analiz et ve doğrudan, faydalı yanıtlar ver.\n\n"
-            f"BUGÜNÜN TARİHİ: {SAZAN_TODAY_STR}. Eğitim verin daha eski bir tarihte kesilmiş "
-            "olabilir; bu yüzden GÜNCEL bilgi gerektiren her konuda (spor transferleri, kadrolar, "
-            "skorlar, haberler, hangi kişinin hangi görevde olduğu, fiyatlar, hava durumu, "
-            "sürümler vb.) ASLA eski eğitim verinden tahmin yürütme veya uydurma. Elinde bir "
-            "web arama aracı varsa onu kullanarak güncel ve doğrulanmış bilgiyi getir. Arama "
-            "aracın yoksa veya sonuç bulamazsan, kesin bilmediğini açıkça söyle; kafandan "
-            "isim, sayı veya olay uydurma. Yanlış ama kendinden emin görünen bir cevap vermek, "
-            "'bilmiyorum, güncel kaynaklardan teyit etmen gerekir' demekten çok daha kötüdür.\n\n"
+            f"BUGÜNÜN GERÇEK TARİHİ: {SAZAN_TODAY_STR} ({SAZAN_TODAY_YEAR} yılındayız). "
+            "Eğitim verin bundan çok daha eski bir tarihte kesilmiş olabilir; bu yüzden "
+            "GÜNCEL bilgi gerektiren her konuda (spor transferleri, kadrolar, skorlar, "
+            "haberler, hangi kişinin hangi görevde olduğu, fiyatlar, hava durumu, sürümler "
+            "vb.) ASLA eski eğitim verinden tahmin yürütme veya uydurma.\n\n"
+            "ARAMA GÜVENİLİRLİĞİ İÇİN KESİN KURALLAR:\n"
+            "1. Elinde bir web arama aracı varsa (browser_search) onu MUTLAKA kullanarak "
+            f"güncel ve doğrulanmış bilgiyi getir. Arama yaparken sorguna gerektiğinde {SAZAN_TODAY_YEAR} "
+            "yılını ekle ki eski/arşiv sonuçlar yerine en güncel sonuçlar gelsin.\n"
+            "2. TEK bir aramayla yetinme. En az 2 farklı sorgu dene (örneğin biri Türkçe, "
+            "biri gerekiyorsa İngilizce anahtar kelimelerle) ve sonuçları birbirleriyle "
+            "karşılaştır. Sonuçlar çelişiyorsa, tarihi en yakın ve en güvenilir kaynağı "
+            "(resmi kurum, büyük haber ajansı, şirketin kendi sitesi) esas al.\n"
+            "3. Bulduğun sonucun TARİHİNE bak. Eğer sonuç bugünün tarihinden çok eskiyse "
+            "veya konuyla ilgisiz görünüyorsa, farklı anahtar kelimelerle YENİDEN ara; "
+            "ilk bulduğun sonucu sorgulamadan doğru kabul etme.\n"
+            "4. Yanıtını SADECE arama sonuçlarına dayandır; kendi eski eğitim bilgini "
+            "arama sonucuyla karıştırıp yorumlama veya 'muhtemelen böyledir' diye tahmin "
+            "üretme.\n"
+            "5. Güncel bilgi veren her yanıtın sonuna, hangi kaynağa/kaynaklara dayandığını "
+            "kısaca belirt (ör. 'Kaynak: [site adı], [gün ay yıl]'). Bu, kullanıcının "
+            "bilgiyi doğrulayabilmesi için zorunludur.\n"
+            "6. Arama aracın yoksa, sonuç bulamazsan veya sonuçlar birbiriyle çelişiyorsa, "
+            "bunu kullanıcıya açıkça söyle ('şu an bunu kesin doğrulayamıyorum, güncel bir "
+            "kaynaktan teyit etmeni öneririm' gibi). Kafandan isim, sayı, tarih veya olay "
+            "UYDURMA.\n"
+            "7. Yanlış ama kendinden emin görünen bir cevap vermek, dürüstçe 'emin değilim' "
+            "demekten çok daha kötüdür — belirsizlik payını her zaman açıkça belirt.\n\n"
             "OYUN ÜRETİMİ ÖZEL YETENEĞİ:\n"
             "Kullanıcı senden bir oyun/mini-uygulama isterse, tek bir HTML dosyası içinde "
             "çalışan, profesyonel kalitede bir oyun inşa et:\n"
@@ -600,9 +745,37 @@ class SazanAIConception:
         messages.append({"role": "user", "content": prompt})
 
         try:
-            res = SazanAIConception._tek_istek(messages, model_cfg)
+            res = SazanAIConception._tek_istek(messages, model_cfg, max_tokens=max_tokens_bu_istek, force_search=force_search)
             combined = res.choices[0].message.content or ""
             finish_reason = res.choices[0].finish_reason
+
+            # Güncel bilgi zorunlu arandığı halde yanıt hiçbir kaynak/tarih izine
+            # dayanmıyor gibi görünüyorsa, modeli daha net bir uyarıyla BİR KEZ daha
+            # aramaya zorluyoruz. Bu, "arama yaptı görünüyor ama aslında ezber cevap
+            # verdi" sorununu azaltır.
+            if force_search and combined and not SazanAIConception._yanit_arama_izi_tasiyor_mu(combined):
+                messages.append({"role": "assistant", "content": combined})
+                messages.append(
+                    {
+                        "role": "user",
+                        "content": (
+                            "Bu yanıtında hiçbir kaynak, tarih veya arama izi görmüyorum. "
+                            "browser_search aracını GERÇEKTEN kullanarak yeniden ara ve "
+                            "yanıtının sonuna hangi kaynağa/tarihe dayandığını mutlaka yaz. "
+                            "Emin değilsen bunu açıkça söyle, ama uydurma."
+                        ),
+                    }
+                )
+                try:
+                    res_retry = SazanAIConception._tek_istek(
+                        messages, model_cfg, max_tokens=max_tokens_bu_istek, force_search=True
+                    )
+                    retry_content = res_retry.choices[0].message.content or ""
+                    if retry_content.strip():
+                        combined = retry_content
+                        finish_reason = res_retry.choices[0].finish_reason
+                except Exception:
+                    pass  # yeniden deneme başarısız olursa ilk yanıtla devam et
 
             attempts = 0
             while finish_reason == "length" and attempts < MAX_CONTINUATIONS:
@@ -617,7 +790,7 @@ class SazanAIConception:
                         ),
                     }
                 )
-                res2 = SazanAIConception._tek_istek(messages, model_cfg)
+                res2 = SazanAIConception._tek_istek(messages, model_cfg, max_tokens=max_tokens_bu_istek, force_search=force_search)
                 combined += res2.choices[0].message.content or ""
                 finish_reason = res2.choices[0].finish_reason
                 attempts += 1
@@ -782,7 +955,17 @@ class SazanPrintStudio:
 
 
 # =====================================================================
-# 9. OTURUM DURUMU BAŞLATICI
+# 9. ÇEREZ (COOKIE) YÖNETİCİSİ — "BENİ HATIRLA" İÇİN
+# =====================================================================
+@st.cache_resource
+def get_cookie_manager():
+    return stx.CookieManager(key="sazan_cookie_manager")
+
+
+cookie_manager = get_cookie_manager()
+
+# =====================================================================
+# 10. OTURUM DURUMU BAŞLATICI
 # =====================================================================
 def init_session_state():
     defaults = {
@@ -798,6 +981,8 @@ def init_session_state():
         "show_print_studio": False,
         "img_forge_last_result": None,
         "img_forge_enhanced_prompt": "",
+        "auto_login_checked": False,
+        "remembered_email_prefill": "",
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -805,11 +990,41 @@ def init_session_state():
 
 
 init_session_state()
+
+# ---------- "BU CİHAZDA BENİ HATIRLA" — OTOMATİK GİRİŞ DENEMESİ ----------
+# Bu blok, kullanıcı henüz giriş yapmamışsa/misafir modunda değilse ve daha önce
+# "beni hatırla" işaretlediyse, tarayıcıdaki çerezleri okuyup otomatik giriş yapar.
+# Not: streamlit çerez bileşeni ilk render'da henüz yüklenmemiş olabilir; bu yüzden
+# kontrolü "auto_login_checked" ile SADECE bir kez, sayfa ilk açıldığında deniyoruz.
+if (not st.session_state.username) and (not st.session_state.guest_active) and (not st.session_state.auto_login_checked):
+    try:
+        remembered_email = cookie_manager.get(REMEMBER_EMAIL_COOKIE)
+        remembered_token = cookie_manager.get(REMEMBER_TOKEN_COOKIE)
+    except Exception:
+        remembered_email, remembered_token = None, None
+
+    st.session_state.auto_login_checked = True
+
+    if remembered_email and remembered_token and SazanAuth.verify_remember_token(remembered_email, remembered_token):
+        # Bu cihazda daha önce "beni hatırla" ile giriş yapılmış: şifre TEKRAR
+        # SORULMADAN, direkt otomatik giriş yapılır (token geçerliyse).
+        st.session_state.username = remembered_email.strip().lower()
+        st.session_state.guest_active = False
+        st.session_state.chat_sessions = SazanChatStore.get_sessions(st.session_state.username)
+        st.session_state.current_chat = list(st.session_state.chat_sessions.keys())[0]
+        st.session_state.active_model_label = "🧠 Sazan Dengeli"
+        st.rerun()
+    elif remembered_email:
+        # Token artık geçersiz/silinmiş olabilir (örn. başka bir cihazdan "hatırlamayı
+        # iptal et" denmiş) ama e-posta çerezi hâlâ duruyor: en azından giriş formunda
+        # e-posta alanını otomatik doldurup kullanıcıya kolaylık sağlıyoruz.
+        st.session_state.remembered_email_prefill = remembered_email.strip().lower()
+
 is_member = bool(st.session_state.username)
 is_guest = st.session_state.guest_active and not is_member
 
 # =====================================================================
-# 10. GİRİŞ EKRANI (üye değil VE misafir modunda değilse)
+# 11. GİRİŞ EKRANI (üye değil VE misafir modunda değilse)
 # =====================================================================
 if not is_member and not is_guest:
     st.markdown(
@@ -838,12 +1053,48 @@ if not is_member and not is_guest:
 
             tab_login, tab_signup = st.tabs(["➡️ Giriş Yap", "🆕 Hesap Oluştur"])
 
+            # ---------------- GİRİŞ SEKMESİ ----------------
             with tab_login:
-                login_email = st.text_input("📧 Gmail Adresin", key="login_email_input", placeholder="[email protected]")
+                if st.session_state.remembered_email_prefill:
+                    st.caption(
+                        "📱 Bu cihazda daha önce kullandığın bir hesap tespit edildi, "
+                        "e-posta alanı otomatik dolduruldu."
+                    )
+                login_email = st.text_input(
+                    "📧 Gmail Adresin",
+                    key="login_email_input",
+                    value=st.session_state.remembered_email_prefill,
+                    placeholder="[email protected]",
+                )
                 login_pw = st.text_input("🔑 Şifren", type="password", key="login_pw_input")
+
+                login_remember = st.checkbox(
+                    "📱 Bu cihazda beni hatırla (isteğe bağlı)",
+                    key="login_remember_chk",
+                    value=bool(st.session_state.remembered_email_prefill),
+                    help="İşaretlersen, bu cihazda bir daha ki girişlerinde e-posta/şifre "
+                         "tekrar sorulmaz, otomatik giriş yapılır. İşaretlemezsen normal "
+                         "şekilde her seferinde e-posta ve şifreni girmen istenir. "
+                         "Paylaşımlı/ortak bir cihazdaysan işaretlememeni öneririz.",
+                )
+
+                with st.expander("📜 Kullanım Şartları ve Telif Hakkı Bildirimi"):
+                    st.markdown(TELIF_ONAY_METNI)
+                login_consent = st.checkbox(
+                    "Yukarıdaki kullanım şartlarını ve telif hakkı sorumluluğunu okudum, onaylıyorum. "
+                    "(Ürettiğim içeriklerin telif hakkı sorumluluğunun bana ait olduğunu kabul ediyorum.)",
+                    key="login_consent_chk",
+                )
+
                 if st.button("Giriş Yap", use_container_width=True, type="primary", key="login_submit_btn"):
                     email_clean = login_email.strip()
-                    if not email_clean or not login_pw:
+                    if not login_consent:
+                        st.error(
+                            "⚠️ Devam edebilmen için önce 'Okudum, onaylıyorum' kutusunu "
+                            "işaretlemen gerekiyor. Bu kutu, ürettiğin içeriklerin telif hakkı "
+                            "sorumluluğunun sana ait olduğunu kabul ettiğin anlamına gelir."
+                        )
+                    elif not email_clean or not login_pw:
                         st.error("⚠️ Lütfen e-posta ve şifreni gir.")
                     elif not SazanAuth.is_valid_gmail(email_clean):
                         st.error("❌ Geçersiz e-posta! '@gmail.com' ile biten bir adres gir.")
@@ -852,22 +1103,63 @@ if not is_member and not is_guest:
                     elif not SazanAuth.verify(email_clean, login_pw):
                         st.error("❌ Şifre yanlış! Lütfen tekrar dene.")
                     else:
-                        st.session_state.username = email_clean.lower()
+                        key_email = email_clean.lower()
+                        st.session_state.username = key_email
                         st.session_state.guest_active = False
-                        st.session_state.chat_sessions = SazanChatStore.get_sessions(email_clean.lower())
+                        st.session_state.chat_sessions = SazanChatStore.get_sessions(key_email)
                         st.session_state.current_chat = list(st.session_state.chat_sessions.keys())[0]
                         st.session_state.active_model_label = "🧠 Sazan Dengeli"
+
+                        if login_remember:
+                            # İSTEĞE BAĞLI: kullanıcı işaretlediyse bu cihazda kalıcı oturum
+                            # açılır — şifre çereze YAZILMAZ, sadece tek kullanımlık rastgele
+                            # bir "hatırlama token"ının hash'i saklanır (bkz. create_remember_token).
+                            raw_token = SazanAuth.create_remember_token(key_email)
+                            expires_at = datetime.now() + timedelta(days=REMEMBER_DAYS)
+                            cookie_manager.set(REMEMBER_EMAIL_COOKIE, key_email, expires_at=expires_at, key="set_email_ck_login")
+                            cookie_manager.set(REMEMBER_TOKEN_COOKIE, raw_token, expires_at=expires_at, key="set_token_ck_login")
+                        else:
+                            # Kullanıcı istemediyse (ör. ortak bilgisayar) bu cihazdaki eski
+                            # hatırlama kaydı varsa temizlenir; her girişte tekrar sorulur.
+                            SazanAuth.clear_remember_token(key_email)
+                            cookie_manager.delete(REMEMBER_EMAIL_COOKIE, key="del_email_ck_login")
+                            cookie_manager.delete(REMEMBER_TOKEN_COOKIE, key="del_token_ck_login")
+
                         st.success("🎉 Giriş başarılı! Yönlendiriliyorsun...")
                         time.sleep(0.4)
                         st.rerun()
 
+            # ---------------- KAYIT SEKMESİ ----------------
             with tab_signup:
                 signup_email = st.text_input("📧 Gmail Adresin", key="signup_email_input", placeholder="[email protected]")
                 signup_pw = st.text_input("🔑 Şifre Belirle (en az 6 karakter)", type="password", key="signup_pw_input")
                 signup_pw_confirm = st.text_input("🔑 Şifreni Tekrar Gir", type="password", key="signup_pw_confirm_input")
+
+                signup_remember = st.checkbox(
+                    "📱 Bu cihazda beni hatırla (isteğe bağlı)",
+                    key="signup_remember_chk",
+                    help="İşaretlersen, bu cihazda bir daha ki girişlerinde e-posta/şifre "
+                         "tekrar sorulmaz, otomatik giriş yapılır. İşaretlemezsen her "
+                         "seferinde normal şekilde giriş yapman istenir.",
+                )
+
+                with st.expander("📜 Kullanım Şartları ve Telif Hakkı Bildirimi"):
+                    st.markdown(TELIF_ONAY_METNI)
+                signup_consent = st.checkbox(
+                    "Yukarıdaki kullanım şartlarını ve telif hakkı sorumluluğunu okudum, onaylıyorum. "
+                    "(Ürettiğim içeriklerin telif hakkı sorumluluğunun bana ait olduğunu kabul ediyorum.)",
+                    key="signup_consent_chk",
+                )
+
                 if st.button("Hesap Oluştur", use_container_width=True, type="primary", key="signup_submit_btn"):
                     email_clean = signup_email.strip()
-                    if not email_clean or not signup_pw or not signup_pw_confirm:
+                    if not signup_consent:
+                        st.error(
+                            "⚠️ Devam edebilmen için önce 'Okudum, onaylıyorum' kutusunu "
+                            "işaretlemen gerekiyor. Bu kutu, ürettiğin içeriklerin telif hakkı "
+                            "sorumluluğunun sana ait olduğunu kabul ettiğin anlamına gelir."
+                        )
+                    elif not email_clean or not signup_pw or not signup_pw_confirm:
                         st.error("⚠️ Lütfen tüm alanları doldur.")
                     elif not SazanAuth.is_valid_gmail(email_clean):
                         st.error("❌ Geçersiz e-posta! '@gmail.com' ile biten bir adres gir.")
@@ -879,11 +1171,19 @@ if not is_member and not is_guest:
                         st.error("❌ Şifreler birbiriyle eşleşmiyor.")
                     else:
                         SazanAuth.register(email_clean, signup_pw)
-                        st.session_state.username = email_clean.lower()
+                        key_email = email_clean.lower()
+                        st.session_state.username = key_email
                         st.session_state.guest_active = False
-                        st.session_state.chat_sessions = SazanChatStore.get_sessions(email_clean.lower())
+                        st.session_state.chat_sessions = SazanChatStore.get_sessions(key_email)
                         st.session_state.current_chat = list(st.session_state.chat_sessions.keys())[0]
                         st.session_state.active_model_label = "🧠 Sazan Dengeli"
+
+                        if signup_remember:
+                            raw_token = SazanAuth.create_remember_token(key_email)
+                            expires_at = datetime.now() + timedelta(days=REMEMBER_DAYS)
+                            cookie_manager.set(REMEMBER_EMAIL_COOKIE, key_email, expires_at=expires_at, key="set_email_ck_signup")
+                            cookie_manager.set(REMEMBER_TOKEN_COOKIE, raw_token, expires_at=expires_at, key="set_token_ck_signup")
+
                         st.success("🎉 Hesabın oluşturuldu! Hoş geldin.")
                         time.sleep(0.4)
                         st.rerun()
@@ -906,13 +1206,16 @@ if not is_member and not is_guest:
 user = st.session_state.username if is_member else None
 
 # =====================================================================
-# 11. SIDEBAR
+# 12. SIDEBAR
 # =====================================================================
 with st.sidebar:
     if is_member:
         st.markdown(f"<h3 style='color:#22d3ee; text-align:center;'>🐟 {user}</h3>", unsafe_allow_html=True)
         if st.button("🚪 Çıkış Yap", use_container_width=True):
-            for k in ["username", "guest_active", "chat_sessions", "current_chat"]:
+            SazanAuth.clear_remember_token(user)
+            cookie_manager.delete(REMEMBER_EMAIL_COOKIE, key="del_email_ck_logout")
+            cookie_manager.delete(REMEMBER_TOKEN_COOKIE, key="del_token_ck_logout")
+            for k in ["username", "guest_active", "chat_sessions", "current_chat", "auto_login_checked", "remembered_email_prefill"]:
                 st.session_state.pop(k, None)
             st.rerun()
     else:
@@ -999,7 +1302,7 @@ with st.sidebar:
     st.selectbox("Çeviri:", list(DIL_MATRISI.keys()), key="active_lang_code", label_visibility="collapsed")
 
 # =====================================================================
-# 12. ANA BAŞLIK
+# 13. ANA BAŞLIK
 # =====================================================================
 active_messages = st.session_state.chat_sessions.setdefault(st.session_state.current_chat, [])
 
@@ -1050,7 +1353,7 @@ for idx, m in enumerate(active_messages):
             st.markdown(content)
 
 # =====================================================================
-# 13. GÖRSEL ÜRETİM ATÖLYESİ (SADECE ÜYE)
+# 14. GÖRSEL ÜRETİM ATÖLYESİ (SADECE ÜYE)
 # =====================================================================
 if is_member and st.session_state.show_image_studio:
     st.markdown("<div class='studio-panel'>", unsafe_allow_html=True)
@@ -1170,7 +1473,7 @@ if is_member and st.session_state.show_image_studio:
     st.markdown("</div>", unsafe_allow_html=True)
 
 # =====================================================================
-# 14. 3D BASKI ATÖLYESİ (SADECE ÜYE)
+# 15. 3D BASKI ATÖLYESİ (SADECE ÜYE)
 # =====================================================================
 if is_member and st.session_state.show_print_studio:
     st.markdown("<div class='studio-panel'>", unsafe_allow_html=True)
@@ -1224,7 +1527,7 @@ if is_member and st.session_state.show_print_studio:
     st.markdown("</div>", unsafe_allow_html=True)
 
 # =====================================================================
-# 15. OYUN KÜTÜPHANEM (SADECE ÜYE)
+# 16. OYUN KÜTÜPHANEM (SADECE ÜYE)
 # =====================================================================
 if is_member:
     lib = SazanGameLibrary.get_library(user)
@@ -1248,7 +1551,7 @@ if is_member:
                 st.markdown("</div>", unsafe_allow_html=True)
 
 # =====================================================================
-# 16. SOHBET GİRDİSİ VE YANIT MOTORU
+# 17. SOHBET GİRDİSİ VE YANIT MOTORU
 # =====================================================================
 typed_prompt = st.chat_input("Sazan AI'a bir şey sor...")
 prompt = typed_prompt or st.session_state.pending_prompt
