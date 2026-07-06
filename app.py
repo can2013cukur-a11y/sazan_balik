@@ -77,6 +77,37 @@ st.markdown(
 
     #MainMenu, footer, header {visibility: hidden;}
 
+    /* ---------- SIDEBAR AÇMA/KAPAMA OKU ---------- */
+    /* "header {visibility: hidden;}" kuralı, bazı Streamlit sürümlerinde sidebar'ı
+       kapatınca tekrar açmaya yarayan ok/ok düğmesini de gizliyordu — bu yüzden
+       sidebar bir kez kapatılınca bir daha açılamıyordu. Aşağıdaki kurallar, hem
+       sidebar KAPALIYKEN görünen açma okunu, hem de sidebar AÇIKKEN görünen kapama
+       okunu (Streamlit sürümüne göre iki farklı test-id kullanılabiliyor) her
+       zaman görünür ve tıklanabilir tutar, ayrıca temaya uygun şekilde boyar.*/
+    [data-testid="collapsedControl"],
+    [data-testid="stSidebarCollapseButton"],
+    [data-testid="stSidebarCollapsedControl"] {
+        visibility: visible !important;
+        display: flex !important;
+        opacity: 1 !important;
+        z-index: 999999 !important;
+    }
+    [data-testid="collapsedControl"] button,
+    [data-testid="stSidebarCollapseButton"] button,
+    [data-testid="stSidebarCollapsedControl"] button {
+        visibility: visible !important;
+        opacity: 1 !important;
+        background: var(--sz-surface) !important;
+        border: 1px solid var(--sz-border) !important;
+        border-radius: 10px !important;
+    }
+    [data-testid="collapsedControl"] svg,
+    [data-testid="stSidebarCollapseButton"] svg,
+    [data-testid="stSidebarCollapsedControl"] svg {
+        color: var(--sz-cyan) !important;
+        fill: var(--sz-cyan) !important;
+    }
+
     /* ---------- SIDEBAR ---------- */
     [data-testid="stSidebar"] {
         background: #080a13 !important;
@@ -255,6 +286,52 @@ st.markdown(
     </style>
     """,
     unsafe_allow_html=True,
+)
+
+# ---------------------------------------------------------------------
+# 2b. YAN MENÜ (SIDEBAR) AÇMA/KAPAMA DÜĞMESİ — EK GÜVENCE
+# ---------------------------------------------------------------------
+# Streamlit'in kendi sidebar açma/kapama okuna ek olarak, sürümden bağımsız
+# çalışan, her zaman ekranda kalan küçük bir "☰" düğmesi ekliyoruz. Bu düğme
+# tıklandığında, sayfada bulunan Streamlit'in yerleşik sidebar kontrolüne
+# (hangi test-id ile geliyorsa) otomatik olarak tıklar. Böylece kullanıcı
+# sidebar'ı kapattıktan sonra "bir daha açılmıyor" sorunu yaşamaz.
+st.components.v1.html(
+    """
+    <script>
+    (function(){
+        const parentDoc = window.parent.document;
+        if (parentDoc.getElementById('sz-sidebar-toggle-btn')) { return; }
+        const btn = parentDoc.createElement('button');
+        btn.id = 'sz-sidebar-toggle-btn';
+        btn.innerHTML = '☰';
+        btn.title = 'Menüyü Aç/Kapat';
+        Object.assign(btn.style, {
+            position: 'fixed', top: '12px', left: '12px', zIndex: 999999,
+            width: '38px', height: '38px', borderRadius: '10px',
+            border: '1px solid #232a3d', background: '#131829',
+            color: '#22d3ee', fontSize: '18px', cursor: 'pointer',
+            boxShadow: '0 6px 18px rgba(0,0,0,0.35)'
+        });
+        btn.onclick = function(){
+            const selectors = [
+                '[data-testid="collapsedControl"] button',
+                '[data-testid="collapsedControl"]',
+                '[data-testid="stSidebarCollapseButton"] button',
+                '[data-testid="stSidebarCollapseButton"]',
+                '[data-testid="stSidebarCollapsedControl"] button',
+                '[data-testid="stSidebarCollapsedControl"]'
+            ];
+            for (const sel of selectors) {
+                const el = parentDoc.querySelector(sel);
+                if (el) { el.click(); return; }
+            }
+        };
+        parentDoc.body.appendChild(btn);
+    })();
+    </script>
+    """,
+    height=0,
 )
 
 # =====================================================================
