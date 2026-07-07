@@ -580,16 +580,93 @@ class SazanImageGallery:
 # =====================================================================
 # 6. GROQ MOTORU & MODEL KATALOĞU
 # =====================================================================
-if "GROQ_API_KEY" not in st.secrets:
+# --- API KEY HAVUZU (Round-Robin + Otomatik Fallback) ---
+# secrets.toml'a şu şekilde ekle:
+#   GROQ_API_KEY   = "gsk_birinci_anahtarin"
+#   GROQ_API_KEY_2 = "gsk_ikinci_anahtarin"
+# İstersen daha fazla ekleyebilirsin: GROQ_API_KEY_3, GROQ_API_KEY_4 ...
+
+def _build_key_pool() -> list[str]:
+    """secrets'tan bulunan tüm GROQ API key'lerini sıralı liste olarak döner."""
+    pool = []
+    # Birincil anahtar
+    if "GROQ_API_KEY" in st.secrets:
+        pool.append(st.secrets["GROQ_API_KEY"])
+    # İkincil ve sonraki anahtarlar: GROQ_API_KEY_2, GROQ_API_KEY_3 ...
+    i = 2
+    while f"GROQ_API_KEY_{i}" in st.secrets:
+        pool.append(st.secrets[f"GROQ_API_KEY_{i}"])
+        i += 1
+    return pool
+
+_GROQ_KEY_POOL = _build_key_pool()
+
+if not _GROQ_KEY_POOL:
     st.error(
-        "🚨 GROQ_API_KEY bulunamadı!\n\n"
+        "🚨 Hiçbir GROQ_API_KEY bulunamadı!\n\n"
         "`.streamlit/secrets.toml` dosyanıza (yerelde) veya Streamlit Cloud "
-        "'Settings > Secrets' bölümüne şunu ekleyin:\n\n"
-        'GROQ_API_KEY = "gsk_sizin_anahtariniz"'
+        "'Settings > Secrets' bölümüne şunları ekleyin:\n\n"
+        'GROQ_API_KEY   = "gsk_birinci_anahtariniz"\n'
+        'GROQ_API_KEY_2 = "gsk_ikinci_anahtariniz"'
     )
     st.stop()
 
-groq_client = Groq(api_key=st.secrets["GROQ_API_KEY"])
+
+class _GroqKeyPool:
+    """
+    Round-robin + otomatik fallback ile Groq client yöneticisi.
+    - Her çağrıda sıradaki anahtarla client oluşturur (round-robin).
+    - Rate-limit veya auth hatası alınırsa bir sonraki anahtara geçer.
+    - Tüm anahtarlar tükenirse orijinal hatayı fırlatır.
+    """
+
+    def __init__(self, keys: list[str]):
+        self._keys = keys
+        self._index = 0  # Şu an kullanılan anahtar sırası
+
+    def _client(self, idx: int) -> Groq:
+        return Groq(api_key=self._keys[idx % len(self._keys)])
+
+    def create(self, **kwargs):
+        """groq_client.chat.completions.create() yerine bu metodu çağır."""
+        total = len(self._keys)
+        last_exc = None
+        for attempt in range(total):
+            idx = (self._index + attempt) % total
+            try:
+                result = self._client(idx).chat.completions.create(**kwargs)
+                # Başarılı istek → bir sonraki çağrı bir sonraki anahtarla başlasın (round-robin)
+                self._index = (idx + 1) % total
+                return result
+            except Exception as e:
+                err = str(e).lower()
+                # Rate limit, kota aşımı veya auth hatası → bir sonraki anahtara geç
+                if any(k in err for k in ("rate_limit", "429", "quota", "auth", "invalid_api_key", "403")):
+                    last_exc = e
+                    continue  # Bir sonraki anahtarı dene
+                # Başka bir hata (model bulunamadı, timeout vb.) → direkt fırlat
+                raise
+        # Tüm anahtarlar tükendi
+        raise last_exc
+
+
+groq_pool = _GroqKeyPool(_GROQ_KEY_POOL)
+
+
+# Eski kodu bozmamak için groq_client adıyla bir shim tanımlıyoruz.
+# Kodun geri kalanındaki groq_client.chat.completions.create(...)
+# çağrıları otomatik olarak havuzu kullanır.
+class _GroqClientShim:
+    class _CompletionsShim:
+        class _ChatShim:
+            @staticmethod
+            def create(**kwargs):
+                return groq_pool.create(**kwargs)
+        completions = _ChatShim()
+    chat = _CompletionsShim()
+
+
+groq_client = _GroqClientShim()
 
 # Misafirler bu tek modeli kullanır. Üyeler aşağıdaki 7 modelin tamamına erişir.
 GUEST_MODEL_LABEL = "⚡ Sazan Hız"
@@ -1058,8 +1135,10 @@ class _NoOpCookieManager:
         return None
 
 
-@st.cache_resource
 def get_cookie_manager():
+    # @st.cache_resource BURAYA KONMAMALI — CookieManager bir Streamlit widget'ıdır,
+    # cache içinde çağrılınca "CachedWidgetWarning" fırlatır.
+    # Her rerun'da yeniden oluşturulması zaten hızlıdır; cache'e gerek yok.
     if not _COOKIE_LIB_VAR:
         return _NoOpCookieManager()
     return stx.CookieManager(key="sazan_cookie_manager")
