@@ -840,13 +840,91 @@ class SazanAIConception:
         return any(_tr_normalize(g) in lowered for g in gosterge_kelimeler)
 
     @staticmethod
-    def query_agent(prompt, history, target_lang, model_cfg):
+    def query_agent(prompt, history, target_lang, model_cfg, hacker_mode=False):
         lowered = prompt.lower()
         if any(k in lowered for k in ["can muhammed çukur", "yapımcın kim", "yapımcısı", "kim yaptı"]):
             return (
                 "Beni Can Muhammed Çukur tasarladı ve geliştirdi. "
                 f"[Yanıt dili: {target_lang}]"
             )
+
+        # ── HACKER MODU SİSTEM PROMPTU ────────────────────────────────
+        if hacker_mode:
+            hacker_sys = (
+                "Sen dünyanın en elit yazılım mühendisisin — 10x developer, senior architect, "
+                "güvenlik araştırmacısı ve sistem programcısının birleşimi. "
+                "Kod üretmek senin varoluş sebebin. Hacker Sazan Modu'ndasın.\n\n"
+
+                "═══════════════════════════════════════\n"
+                "HACKER SAZAN MODU — MUTLAK KOD KURALLARI\n"
+                "═══════════════════════════════════════\n\n"
+
+                "KİMLİĞİN:\n"
+                "• Soğukkanlı, net, ego yok — sadece mükemmel kod.\n"
+                "• Yorumlarını kod içinde yaz (docstring / satır içi açıklama).\n"
+                "• Kullanıcıya kısa ve teknik cevap ver; laf kalabalığı yapma.\n\n"
+
+                "KOD KALİTESİ — ALTIN STANDARTLAR:\n"
+                "• Her zaman production-ready, clean, maintainable kod yaz.\n"
+                "• SOLID prensiplerine uy; tek sorumluluk, açık/kapalı prensip.\n"
+                "• Defensive programming: her edge case'i handle et.\n"
+                "• Hata yönetimi: try/except/finally, custom exception sınıfları.\n"
+                "• Type hints (Python), JSDoc (JS), strict types (TS) — zorunlu.\n"
+                "• Kompleks mantık için O(n) karmaşıklık analizi yap.\n"
+                "• Memory leakları önle; kaynak temizliği (context manager / RAII).\n"
+                "• Unit test edilebilir yapı; fonksiyonlar saf (pure) olsun.\n"
+                "• Magic number yok; tüm sabitler büyük harfli değişkende.\n"
+                "• DRY prensip; tekrar eden kodu abstraction'a al.\n\n"
+
+                "YAPI & MİMARİ:\n"
+                "• Küçük görev → tek dosya, temiz fonksiyonlar.\n"
+                "• Orta görev → modüler yapı, ayrı sınıflar.\n"
+                "• Büyük görev → katmanlı mimari (presentation/business/data).\n"
+                "• Config/secrets asla hardcode; ortam değişkeni veya config dosyası.\n"
+                "• Async/await doğru kullan; callback hell yok.\n\n"
+
+                "GÜVENLİK (her zaman):\n"
+                "• Input validation & sanitization.\n"
+                "• SQL injection, XSS, CSRF koruması.\n"
+                "• Hassas veri asla log'a yazılmaz.\n"
+                "• Güvenli hash (bcrypt/argon2), güvenli random (secrets modülü).\n\n"
+
+                "PERFORMANS:\n"
+                "• Önce doğru, sonra hızlı — premature optimization yok.\n"
+                "• Bottleneck tespit edilince profil çıkar, o noktayı optimize et.\n"
+                "• Lazy loading, caching, connection pooling gerektiğinde kullan.\n\n"
+
+                "ÇIKTI FORMATI:\n"
+                "• Kodu doğru dil etiketiyle (```python, ```js, ```ts vb.) bloğa al.\n"
+                "• Önce ne yaptığını 1-3 cümleyle açıkla, sonra kodu ver.\n"
+                "• Birden fazla dosya gerekiyorsa her birini ayrı blokta, dosya adını "
+                "  blok üstünde yorum olarak belirt (# filename: app.py gibi).\n"
+                "• Varsa kritik kurulum adımlarını blok sonunda kısaca listele.\n\n"
+
+                f"Yanıt dili: {target_lang}\n"
+                "Şimdi ne inşa edelim?"
+            )
+            messages = [{"role": "system", "content": hacker_sys}]
+            for m in history[-8:-1]:
+                messages.append({"role": m["role"], "content": _kisalt_gecmis_icerik(m["content"], limit_chars=1200)})
+            messages.append({"role": "user", "content": prompt})
+            try:
+                # Hacker modunda max token yüksek tut
+                res = SazanAIConception._tek_istek(messages, model_cfg, max_tokens=6000, force_search=False)
+                combined = res.choices[0].message.content or ""
+                finish_reason = res.choices[0].finish_reason
+                attempts = 0
+                while finish_reason == "length" and attempts < MAX_CONTINUATIONS:
+                    messages.append({"role": "assistant", "content": combined})
+                    messages.append({"role": "user", "content": "Kaldığın satırdan itibaren devam et, başa dönme."})
+                    res2 = SazanAIConception._tek_istek(messages, model_cfg, max_tokens=6000)
+                    combined += res2.choices[0].message.content or ""
+                    finish_reason = res2.choices[0].finish_reason
+                    attempts += 1
+                return combined
+            except Exception as e:
+                return f"⚠️ Hacker Mod hatası: {e}"
+        # ── NORMAL MOD DEVAM ─────────────────────────────────────────
 
         force_search = model_cfg.get("web_search", False) and _guncel_bilgi_sorusu_mu(prompt)
 
@@ -1219,6 +1297,7 @@ def init_session_state():
         "pending_prompt": None,
         "show_image_studio": False,
         "show_print_studio": False,
+        "hacker_mode": False,
         "img_forge_last_result": None,
         "img_forge_enhanced_prompt": "",
         "auto_login_checked": False,
@@ -1547,15 +1626,246 @@ with st.sidebar:
         )
 
     st.divider()
+    # ── HACKER SAZAN MODU ──
+    hacker_active = st.session_state.get("hacker_mode", False)
+    hacker_btn_label = "🟢 HACKER MODU AKTİF" if hacker_active else "💀 Hacker Sazan Modunu Aç"
+    hacker_btn_type  = "primary" if hacker_active else "secondary"
+    if st.button(hacker_btn_label, use_container_width=True, type=hacker_btn_type, key="hacker_toggle_btn"):
+        st.session_state.hacker_mode = not hacker_active
+        st.rerun()
+    if hacker_active:
+        st.markdown(
+            "<p style='text-align:center;color:#00ff41;font-size:0.72rem;margin:2px 0 0 0;'>"
+            "⚡ Sadece kod yaz · Maksimum kalite</p>",
+            unsafe_allow_html=True,
+        )
+
+    st.divider()
     st.markdown("**🌐 Dil**")
     st.selectbox("Çeviri:", list(DIL_MATRISI.keys()), key="active_lang_code", label_visibility="collapsed")
 
 # =====================================================================
-# 13. ANA BAŞLIK
+# 13. ANA BAŞLIK / HACKER MODU
 # =====================================================================
 active_messages = st.session_state.chat_sessions.setdefault(st.session_state.current_chat, [])
 
-if not active_messages:
+# ── HACKER SAZAN MODU AÇILIŞ EKRANI ──────────────────────────────────
+if st.session_state.get("hacker_mode", False):
+    st.components.v1.html(
+        """
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+            * { margin:0; padding:0; box-sizing:border-box; }
+            body { background:#000; overflow:hidden; }
+
+            #hz-canvas { display:block; width:100%; height:340px; }
+
+            #hz-overlay {
+                position:absolute; top:0; left:0; width:100%; height:340px;
+                display:flex; flex-direction:column;
+                align-items:center; justify-content:center;
+                pointer-events:none;
+            }
+            #hz-title {
+                font-family:'Share Tech Mono', monospace;
+                font-size:2.4rem; font-weight:700; letter-spacing:6px;
+                color:#00ff41;
+                text-shadow: 0 0 10px #00ff41, 0 0 30px #00ff41, 0 0 60px #00cc33;
+                animation: glitch 2.5s infinite;
+            }
+            #hz-sub {
+                font-family:'Share Tech Mono', monospace;
+                font-size:1rem; color:#00cc33; letter-spacing:3px; margin-top:10px;
+                text-shadow: 0 0 8px #00cc33;
+                opacity:0.85;
+            }
+            #hz-badge {
+                margin-top:18px;
+                font-family:'Share Tech Mono', monospace;
+                font-size:0.75rem; color:#004d14;
+                background:#00ff41; padding:5px 18px; border-radius:4px;
+                letter-spacing:2px; box-shadow: 0 0 18px #00ff41;
+            }
+            @keyframes glitch {
+                0%,95%,100% { text-shadow: 0 0 10px #00ff41, 0 0 30px #00ff41, 0 0 60px #00cc33; transform:translate(0,0); }
+                96%          { text-shadow: -3px 0 #ff0066, 3px 0 #00ffff; transform:translate(-2px,1px); }
+                97%          { text-shadow:  3px 0 #ff0066,-3px 0 #00ffff; transform:translate( 2px,-1px); }
+                98%          { text-shadow: -2px 0 #00ffff, 2px 0 #ff0066; transform:translate( 1px, 2px); }
+            }
+        </style>
+
+        <div style="position:relative;width:100%;height:340px;background:#000;">
+            <canvas id="hz-canvas"></canvas>
+            <div id="hz-overlay">
+                <div id="hz-title">💀 HACKER SAZAN MODU</div>
+                <div id="hz-sub">⚡ AÇILDI — KOD MAKİNESİ HAZIR ⚡</div>
+                <div id="hz-badge">MAXIMUM CODE QUALITY UNLOCKED</div>
+            </div>
+        </div>
+
+        <script>
+        (function(){
+            const canvas = document.getElementById('hz-canvas');
+            const ctx    = canvas.getContext('2d');
+
+            function resize(){
+                canvas.width  = canvas.offsetWidth  || 700;
+                canvas.height = canvas.offsetHeight || 340;
+            }
+            resize();
+            window.addEventListener('resize', resize);
+
+            /* ── Matrix rain ── */
+            const COLS_CH = 'アイウエオカキクケコ0123456789ABCDEF<>{}[]()!@#$%^&*';
+            let cols, drops;
+
+            function initMatrix(){
+                const fontSize = 14;
+                cols  = Math.floor(canvas.width / fontSize);
+                drops = Array.from({length: cols}, () => Math.random() * -canvas.height / fontSize | 0);
+            }
+            initMatrix();
+
+            /* ── Floating code particles ── */
+            const SNIPPETS = [
+                'import os', 'def hack():', 'while True:', 'SELECT *',
+                'git push', 'sudo rm -rf', '0xDEADBEEF', 'chmod +x',
+                'ssh root@', 'curl -X POST', 'docker run', 'kubectl apply',
+                '#!/bin/bash', 'async def', 'Promise.all', 'malloc(512)',
+                'XOR eax,eax', 'INT 0x80', 'RSA_2048', 'AES-256-GCM',
+            ];
+            const particles = Array.from({length: 22}, () => ({
+                x: Math.random() * 700,
+                y: Math.random() * 340,
+                vx: (Math.random() - 0.5) * 0.6,
+                vy: (Math.random() - 0.5) * 0.4,
+                text: SNIPPETS[Math.random() * SNIPPETS.length | 0],
+                alpha: Math.random() * 0.5 + 0.15,
+                size: Math.random() * 9 + 9,
+            }));
+
+            /* ── Scan line ── */
+            let scanY = 0;
+
+            /* ── Hexagon grid ── */
+            function hexPath(cx, cy, r){
+                ctx.beginPath();
+                for(let i=0;i<6;i++){
+                    const a = Math.PI/3*i - Math.PI/6;
+                    i===0 ? ctx.moveTo(cx+r*Math.cos(a), cy+r*Math.sin(a))
+                          : ctx.lineTo(cx+r*Math.cos(a), cy+r*Math.sin(a));
+                }
+                ctx.closePath();
+            }
+
+            let frame = 0;
+            function draw(){
+                const W = canvas.width, H = canvas.height;
+                const fontSize = 14;
+
+                /* Background */
+                ctx.fillStyle = 'rgba(0,0,0,0.82)';
+                ctx.fillRect(0,0,W,H);
+
+                /* Matrix rain */
+                ctx.font = fontSize+'px monospace';
+                for(let i=0;i<cols;i++){
+                    const ch = COLS_CH[Math.random()*COLS_CH.length|0];
+                    const y  = drops[i]*fontSize;
+                    /* bright head */
+                    ctx.fillStyle = `rgba(180,255,180,${0.8+0.2*Math.sin(frame*0.05+i)})`;
+                    ctx.fillText(ch, i*fontSize, y);
+                    /* trail */
+                    ctx.fillStyle = `rgba(0,${100+Math.random()*155|0},${40+Math.random()*40|0},0.35)`;
+                    ctx.fillText(COLS_CH[Math.random()*COLS_CH.length|0], i*fontSize, y-fontSize);
+
+                    if(drops[i]*fontSize > H && Math.random()>0.975) drops[i]=0;
+                    drops[i]++;
+                }
+
+                /* Hex grid overlay */
+                const hexR = 28, hexW = hexR*Math.sqrt(3), hexH = hexR*2;
+                for(let row=-1; row<H/hexH*1.5; row++){
+                    for(let col=-1; col<W/hexW*1.2; col++){
+                        const cx = col*hexW + (row%2===0?0:hexW/2);
+                        const cy = row*hexH*0.75;
+                        hexPath(cx,cy,hexR-1);
+                        ctx.strokeStyle = `rgba(0,255,65,${0.04+0.02*Math.sin(frame*0.02+col+row)})`;
+                        ctx.lineWidth = 0.5;
+                        ctx.stroke();
+                    }
+                }
+
+                /* Floating code snippets */
+                ctx.font = '11px "Share Tech Mono",monospace';
+                particles.forEach(p => {
+                    p.x += p.vx; p.y += p.vy;
+                    if(p.x<-120) p.x=W+20;
+                    if(p.x>W+20) p.x=-120;
+                    if(p.y<-20)  p.y=H+10;
+                    if(p.y>H+10) p.y=-20;
+                    const glow = 0.3+0.2*Math.sin(frame*0.04+p.x*0.01);
+                    ctx.globalAlpha = p.alpha * glow;
+                    ctx.fillStyle   = '#00ff41';
+                    ctx.shadowColor = '#00ff41';
+                    ctx.shadowBlur  = 8;
+                    ctx.fillText(p.text, p.x, p.y);
+                    ctx.globalAlpha = 1;
+                    ctx.shadowBlur  = 0;
+                });
+
+                /* Scan line */
+                scanY = (scanY + 1.2) % H;
+                const sg = ctx.createLinearGradient(0,scanY-8,0,scanY+8);
+                sg.addColorStop(0,   'rgba(0,255,65,0)');
+                sg.addColorStop(0.5, 'rgba(0,255,65,0.18)');
+                sg.addColorStop(1,   'rgba(0,255,65,0)');
+                ctx.fillStyle = sg;
+                ctx.fillRect(0, scanY-8, W, 16);
+
+                /* Corner brackets */
+                ctx.strokeStyle='rgba(0,255,65,0.7)';
+                ctx.lineWidth=2;
+                const b=18, bl=38;
+                [[b,b,1,1],[W-b,b,-1,1],[b,H-b,1,-1],[W-b,H-b,-1,-1]].forEach(([x,y,dx,dy])=>{
+                    ctx.beginPath(); ctx.moveTo(x,y+dy*bl); ctx.lineTo(x,y); ctx.lineTo(x+dx*bl,y); ctx.stroke();
+                });
+
+                frame++;
+                requestAnimationFrame(draw);
+            }
+            draw();
+        })();
+        </script>
+        """,
+        height=345,
+    )
+
+    st.markdown(
+        """
+        <style>
+        .hacker-tip {
+            background: linear-gradient(90deg,#001a00,#002600,#001a00);
+            border: 1px solid #00ff41;
+            border-radius: 10px;
+            padding: 10px 20px;
+            font-family: 'Share Tech Mono', monospace;
+            color: #00ff41;
+            font-size: 0.82rem;
+            text-align: center;
+            box-shadow: 0 0 18px rgba(0,255,65,0.25);
+            margin-bottom: 6px;
+        }
+        </style>
+        <div class="hacker-tip">
+            💻 Kod modundasın — ne yazmak istersen yaz, saf kod gelir.<br>
+            <span style="color:#007a20;">Sohbete dönmek için soldaki butona bas.</span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+if not active_messages and not st.session_state.get("hacker_mode", False):
     st.markdown(
         """
         <div class='sz-hero sz-hero-mini'>
@@ -1571,6 +1881,8 @@ if not active_messages:
             if st.button(sug, key=f"chip_{i}", use_container_width=True):
                 st.session_state.pending_prompt = sug.split(" ", 1)[1]
                 st.rerun()
+elif not active_messages:
+    pass  # hacker modunda boş ekranda sadece simülasyon görünür
 
 # -----------------------------------------------------------------------
 # Kod bloğu → uzantı/MIME/ikon eşleme tablosu
@@ -1906,7 +2218,9 @@ if is_member:
 # =====================================================================
 # 17. SOHBET GİRDİSİ VE YANIT MOTORU
 # =====================================================================
-typed_prompt = st.chat_input("Sazan AI'a bir şey sor...")
+_is_hacker = st.session_state.get("hacker_mode", False)
+_chat_placeholder = "💀 Kod yaz, hack et, inşa et..." if _is_hacker else "Sazan AI'a bir şey sor..."
+typed_prompt = st.chat_input(_chat_placeholder)
 prompt = typed_prompt or st.session_state.pending_prompt
 if st.session_state.pending_prompt and not typed_prompt:
     st.session_state.pending_prompt = None
@@ -1917,9 +2231,13 @@ if prompt:
     model_label = st.session_state.active_model_label if is_member else GUEST_MODEL_LABEL
     model_cfg = AI_MODELS.get(model_label, AI_MODELS[GUEST_MODEL_LABEL])
 
-    with st.spinner("Sazan AI düşünüyor..."):
+    _spinner_text = "💀 Kod derleniyor..." if _is_hacker else "Sazan AI düşünüyor..."
+    with st.spinner(_spinner_text):
         cur_lang = st.session_state.get("active_lang_code", "Türkçe 🇹🇷")
-        ans = SazanAIConception.query_agent(prompt, active_messages, cur_lang, model_cfg)
+        ans = SazanAIConception.query_agent(
+            prompt, active_messages, cur_lang, model_cfg,
+            hacker_mode=_is_hacker,
+        )
         active_messages.append({"role": "assistant", "content": ans})
 
         html_blocks = re.findall(r"```html\s*(.*?)\s*```", ans, re.DOTALL)
