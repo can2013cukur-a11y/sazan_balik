@@ -849,7 +849,26 @@ class SazanAIConception:
             )
 
         force_search = model_cfg.get("web_search", False) and _guncel_bilgi_sorusu_mu(prompt)
-        max_tokens_bu_istek = SEARCH_MAX_TOKENS if force_search else DEFAULT_MAX_TOKENS
+
+        # Oyun isteklerini tespit et — daha genis token penceresi ac
+        _OYUN_KELIMELERI = [
+            "oyun", "game", "oyunu", "oynak", "oyna", "snake", "tetris", "platform",
+            "mario", "shooter", "araba", "racing", "puzzle", "bulmaca", "quiz",
+            "labirent", "maze", "flappy", "pong", "breakout", "pacman", "pac-man",
+            "canavar", "zombie", "uzay", "space", "asteroids", "dungeon", "rpg",
+            "tower defense", "strateji", "kart oyunu", "memory", "hafiza", "match",
+            "interaktif", "simulasyon", "simulation", "mini uygulama",
+        ]
+        _lowered_tr = _tr_normalize(prompt)
+        is_game_request = any(_tr_normalize(k) in _lowered_tr for k in _OYUN_KELIMELERI)
+        GAME_MAX_TOKENS = 7000
+
+        if is_game_request:
+            max_tokens_bu_istek = GAME_MAX_TOKENS
+        elif force_search:
+            max_tokens_bu_istek = SEARCH_MAX_TOKENS
+        else:
+            max_tokens_bu_istek = DEFAULT_MAX_TOKENS
 
         sys_prompt = (
             "Sen Sazan AI adında, sıcak, net ve yardımsever genel amaçlı bir yapay zeka "
@@ -883,19 +902,58 @@ class SazanAIConception:
             "UYDURMA.\n"
             "7. Yanlış ama kendinden emin görünen bir cevap vermek, dürüstçe 'emin değilim' "
             "demekten çok daha kötüdür — belirsizlik payını her zaman açıkça belirt.\n\n"
-            "OYUN ÜRETİMİ ÖZEL YETENEĞİ:\n"
-            "Kullanıcı senden bir oyun/mini-uygulama isterse, tek bir HTML dosyası içinde "
-            "çalışan, profesyonel kalitede bir oyun inşa et:\n"
-            "1. Menü, oynanış, duraklatma ve 'oyun bitti' ekranlarını içeren net bir durum "
-            "makinesi (state machine) kullan.\n"
-            "2. Temiz, okunabilir ES6+ JavaScript yaz; requestAnimationFrame tabanlı, "
-            "delta-time uygulayan düzgün bir oyun döngüsü kur.\n"
-            "3. Hem klavye hem dokunmatik kontrolleri destekle; canvas boyutu responsive olsun.\n"
-            "4. Dış CDN/script/görsel/ses linki KULLANMA; oyun tamamen bağımsız ve tek dosyada "
-            "offline çalışabilmeli (base64 data-URI olarak açılacak).\n"
-            "5. Görseller için Canvas çizimleri, CSS gradyanları veya basit şekiller kullan.\n"
-            "6. Kodu asla yarım bırakma; eksiksiz ve çalışır durumda bitir.\n"
-            "7. Ürettiğin HTML kodunu KESİNLİKLE tek bir ```html ... ``` bloğu içine al.\n\n"
+            "═══════════════════════════════════════════════════════\n"
+            "OYUN & İNTERAKTİF UYGULAMA ÜRETİMİ — ALTIN STANDARTLAR\n"
+            "═══════════════════════════════════════════════════════\n\n"
+            "Kullanıcı senden bir oyun, mini-uygulama veya interaktif deneyim istediğinde,\n"
+            "STÜDYO kalitesinde, tek HTML dosyasında çalışan bir şaheser üret.\n\n"
+
+            "── MİMARİ & KOD KALİTESİ ──\n"
+            "• Strict mode ('use strict') ile ES6+ class tabanlı mimari kur.\n"
+            "• Tüm oyun mantığı, sahne yönetimi ve varlıklar kendi sınıflarında olsun.\n"
+            "• requestAnimationFrame + delta-time ile tam bağımsız oyun döngüsü.\n"
+            "• State machine: MENU → PLAYING → PAUSED → GAME_OVER → (LEVEL_COMPLETE) geçişleri.\n"
+            "• Responsive canvas: window.resize olayını dinle, canvas'ı yeniden ölçekle.\n"
+            "• Sıfır dış bağımlılık — CDN, harici font, resim veya ses URL'si YASAK.\n"
+            "• Kodu ASLA yarım bırakma; son tag kapanıncaya kadar eksiksiz yaz.\n\n"
+
+            "── GÖRSEL & SANATSAL KALİTE ──\n"
+            "• Karanlık/neon tema tercih et; arka planı saf siyah bırakma — gradient veya\n"
+            "  yıldız/parçacık alanı gibi dinamik bir arka plan ekle.\n"
+            "• Canvas API ile smooth anti-aliased varlıklar çiz; glow/shadow efektleri kullan.\n"
+            "• Her varlığın (oyuncu, düşman, mermi, platform) en az 2 renk gradyanı olsun.\n"
+            "• Animasyonlar: sprite animasyonu yoksa bile scale/alpha/rotate tween'leri ekle.\n"
+            "• Başlık ekranında oyun logosunu büyük, animasyonlu ve gradient renkli göster.\n"
+            "• Partikül sistemi: patlama, toplama, ölüm, seviye atlama gibi olaylar için.\n"
+            "• UI: yarı-saydam yuvarlatılmış paneller, ikon + metin kombinasyonu skor/can göstergesi.\n\n"
+
+            "── OYNANIŞI ZENGİNLEŞTİR ──\n"
+            "• Zorluk eğrisi: düşman hızı/sayısı her 30 saniye veya her seviyede artsın.\n"
+            "• Güç-ups (power-ups): rastgele spawn olan en az 2 farklı avantaj öğesi.\n"
+            "• Combo sistemi: art arda öldürme/toplama başarıları çarpan bonusu versin.\n"
+            "• Yüksek skor (high-score): localStorage ile kalıcı olarak sakla.\n"
+            "• Ses: AudioContext + Web Audio API ile sentezlenmiş SFX (atış, ölüm, puan, level-up).\n"
+            "• Seviye/dalga sistemi: her wave'de yeni düşman tipi veya davranış ekle.\n"
+            "• Oyun içi kısa talimat/kontrol gösterimi (ilk 3 saniye veya menüde).\n\n"
+
+            "── KONTROL & ERİŞİLEBİLİRLİK ──\n"
+            "• Klavye: tam key-map (WASD + ok tuşları + Space + P + M + R).\n"
+            "• Dokunmatik: canvas üzerinde swipe ve tap kontrolü; mobil on-screen butonlar.\n"
+            "• Fare: gerektiğinde mouse-aim / tıklama desteği.\n"
+            "• Gamepad API: bağlıysa otomatik algıla ve ilk iki eksen + düğmeleri map'le.\n"
+            "• ESC/P tuşu: her an duraklatma; duraklatma sırasında müziği ve döngüyü durdur.\n\n"
+
+            "── ZORUNLU EKRANLAR ──\n"
+            "• MENÜ: logo animasyonu + 'OYNA' butonu + kontrol listesi + en yüksek skor.\n"
+            "• OYUN: HUD (skor, can, seviye, güç-up süresi) + duraklatma butonu.\n"
+            "• DURAKLAT: blur overlay + 'Devam Et' / 'Yeniden Başla' / 'Menüye Dön'.\n"
+            "• OYUN BİTTİ: büyük animasyonlu 'GAME OVER' + skor özeti + high-score karşılaştırma.\n"
+            "• SEVIYE TAMAMLANDI (varsa): skor bonusu animasyonu + 'Sonraki Seviye'.\n\n"
+
+            "── ÇIKTI KURALI ──\n"
+            "Ürettiğin HTML kodunu KESİNLİKLE tek bir ```html ... ``` bloğu içine al.\n"
+            "Açıklama metni varsa bloğun ÖNÜNE yaz; sonrasına hiçbir şey ekleme.\n\n"
+            "═══════════════════════════════════════════════════════\n\n"
             "Oyun dışı tüm sohbet, açıklama ve yanıtlarını şu dilde yaz: " + target_lang
         )
 
@@ -1514,16 +1572,101 @@ if not active_messages:
                 st.session_state.pending_prompt = sug.split(" ", 1)[1]
                 st.rerun()
 
+# -----------------------------------------------------------------------
+# Kod bloğu → uzantı/MIME/ikon eşleme tablosu
+# -----------------------------------------------------------------------
+_EXT_MAP = {
+    # Web
+    "html": ("html", "text/html", "🌐"),
+    "css":  ("css",  "text/css",  "🎨"),
+    "js":   ("js",   "text/javascript", "⚙️"),
+    "javascript": ("js", "text/javascript", "⚙️"),
+    # Veri / config
+    "json": ("json", "application/json", "📋"),
+    "yaml": ("yaml", "text/yaml", "📋"),
+    "yml":  ("yml",  "text/yaml", "📋"),
+    "xml":  ("xml",  "application/xml", "📋"),
+    "csv":  ("csv",  "text/csv", "📊"),
+    "toml": ("toml", "text/plain", "📋"),
+    "env":  ("env",  "text/plain", "🔐"),
+    # Python ekosistemi
+    "python": ("py", "text/x-python", "🐍"),
+    "py":     ("py", "text/x-python", "🐍"),
+    # Sistem / shell
+    "bash":       ("sh",  "text/x-sh", "💻"),
+    "sh":         ("sh",  "text/x-sh", "💻"),
+    "powershell": ("ps1", "text/plain", "💻"),
+    "ps1":        ("ps1", "text/plain", "💻"),
+    "batch":      ("bat", "text/plain", "💻"),
+    "bat":        ("bat", "text/plain", "💻"),
+    # C ailesi
+    "c":    ("c",   "text/x-c", "⚙️"),
+    "cpp":  ("cpp", "text/x-c++", "⚙️"),
+    "c++":  ("cpp", "text/x-c++", "⚙️"),
+    "h":    ("h",   "text/x-c", "⚙️"),
+    # JVM
+    "java":   ("java",   "text/x-java-source", "☕"),
+    "kotlin": ("kt",     "text/x-kotlin", "☕"),
+    "kt":     ("kt",     "text/x-kotlin", "☕"),
+    # .NET
+    "csharp": ("cs",  "text/plain", "🔷"),
+    "cs":     ("cs",  "text/plain", "🔷"),
+    "vb":     ("vb",  "text/plain", "🔷"),
+    # Fonksiyonel / diğer
+    "rust":   ("rs",  "text/plain", "🦀"),
+    "rs":     ("rs",  "text/plain", "🦀"),
+    "go":     ("go",  "text/plain", "🐹"),
+    "ruby":   ("rb",  "text/plain", "💎"),
+    "rb":     ("rb",  "text/plain", "💎"),
+    "php":    ("php", "text/plain", "🐘"),
+    "swift":  ("swift","text/plain","🍎"),
+    "r":      ("r",   "text/plain", "📊"),
+    "scala":  ("scala","text/plain","⚙️"),
+    "lua":    ("lua", "text/plain", "🌙"),
+    # Veritabanı
+    "sql": ("sql", "text/plain", "🗄️"),
+    # Metin / doküman
+    "markdown": ("md",  "text/markdown", "📝"),
+    "md":       ("md",  "text/markdown", "📝"),
+    "txt":      ("txt", "text/plain", "📄"),
+    "text":     ("txt", "text/plain", "📄"),
+    # Altyapı / DevOps
+    "dockerfile": ("Dockerfile", "text/plain", "🐳"),
+    "docker":     ("Dockerfile", "text/plain", "🐳"),
+    "terraform":  ("tf",  "text/plain", "🏗️"),
+    "tf":         ("tf",  "text/plain", "🏗️"),
+    "nginx":      ("conf","text/plain", "🌐"),
+    "apache":     ("conf","text/plain", "🌐"),
+}
+
+def _parse_code_blocks(content: str):
+    """
+    İçerikteki tüm ```lang ... ``` bloklarını bulur.
+    Dönüş: list of (lang_raw, code_str, ext, mime, icon)
+    """
+    pattern = re.compile(r"```(\w*)\s*(.*?)\s*```", re.DOTALL)
+    results = []
+    for m in pattern.finditer(content):
+        lang_raw = m.group(1).lower().strip()
+        code = m.group(2)
+        ext, mime, icon = _EXT_MAP.get(lang_raw, ("txt", "text/plain", "📄"))
+        results.append((lang_raw, code, ext, mime, icon))
+    return results
+
+
 for idx, m in enumerate(active_messages):
     with st.chat_message(m["role"]):
         content = m["content"]
-        html_blocks = re.findall(r"```html\s*(.*?)\s*```", content, re.DOTALL)
+        blocks = _parse_code_blocks(content)
+        html_blocks = [b for b in blocks if b[0] == "html"]
 
         if html_blocks:
-            clean_text = re.sub(r"```html\s*(.*?)\s*```", "", content, flags=re.DOTALL)
-            st.markdown(clean_text)
+            # HTML oyun varsa temizlenmiş metni göster + oyun aksiyonları
+            clean_text = re.sub(r"```html\s*(.*?)\s*```", "", content, flags=re.DOTALL).strip()
+            if clean_text:
+                st.markdown(clean_text)
 
-            game_code = html_blocks[0]
+            game_code = html_blocks[0][1]
             b64_game = base64.b64encode(game_code.encode("utf-8")).decode("utf-8")
             game_url = f"data:text/html;base64,{b64_game}"
 
@@ -1536,10 +1679,29 @@ for idx, m in enumerate(active_messages):
                 data=game_code,
                 file_name=f"sazan_oyun_{idx}.html",
                 mime="text/html",
-                key=f"dl_{st.session_state.current_chat}_{idx}",
+                key=f"dl_html_{st.session_state.current_chat}_{idx}",
             )
             with st.expander("🛠️ Kaynak Kodu Görüntüle"):
                 st.code(game_code, language="html")
+
+        elif blocks:
+            # HTML olmayan kod blokları — her biri için indir butonu ekle
+            # Önce markdown'ı bloklardan arındırarak göster
+            clean_text = re.sub(r"```\w*\s*.*?\s*```", "", content, flags=re.DOTALL).strip()
+            if clean_text:
+                st.markdown(clean_text)
+
+            for b_idx, (lang_raw, code, ext, mime, icon) in enumerate(blocks):
+                # Orijinal ```lang ... ``` bloğunu syntax-highlight ile göster
+                st.code(code, language=lang_raw if lang_raw else None)
+                safe_name = re.sub(r"[^a-z0-9_]", "_", lang_raw) if lang_raw else "kod"
+                st.download_button(
+                    f"{icon} .{ext} olarak indir",
+                    data=code,
+                    file_name=f"sazan_{safe_name}_{idx}_{b_idx}.{ext}",
+                    mime=mime,
+                    key=f"dl_{lang_raw}_{st.session_state.current_chat}_{idx}_{b_idx}",
+                )
         else:
             st.markdown(content)
 
