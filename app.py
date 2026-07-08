@@ -580,88 +580,84 @@ class SazanImageGallery:
 # =====================================================================
 # 6. GROQ MOTORU & MODEL KATALOĞU
 # =====================================================================
-# --- API KEY HAVUZU (Round-Robin + Otomatik Fallback) ---
-# secrets.toml'a şu şekilde ekle:
-#   GROQ_API_KEY   = "gsk_birinci_anahtarin"
-#   GROQ_API_KEY_2 = "gsk_ikinci_anahtarin"
-# İstersen daha fazla ekleyebilirsin: GROQ_API_KEY_3, GROQ_API_KEY_4 ...
+# ── API KEY ROL HARİTASI ─────────────────────────────────────────────
+# secrets.toml'a (veya Streamlit Cloud Secrets'a) şu şekilde ekle:
+#
+#   GROQ_API_KEY   = "gsk_..."   # Key 1 → sohbet / normal yazışma
+#   GROQ_API_KEY_2 = "gsk_..."   # Key 2 → sohbet / normal yazışma (round-robin)
+#   GROQ_API_KEY_3 = "gsk_..."   # Key 3 → görsel üretimi + 3D baskı
+#   GROQ_API_KEY_4 = "gsk_..."   # Key 4 → hacker modu (kod yazımı)
+#
+# Eksik key varsa fallback: görsel/3D → KEY 1, hacker → KEY 1.
 
-def _build_key_pool() -> list[str]:
-    """secrets'tan bulunan tüm GROQ API key'lerini sıralı liste olarak döner."""
-    pool = []
-    # Birincil anahtar
-    if "GROQ_API_KEY" in st.secrets:
-        pool.append(st.secrets["GROQ_API_KEY"])
-    # İkincil ve sonraki anahtarlar: GROQ_API_KEY_2, GROQ_API_KEY_3 ...
-    i = 2
-    while f"GROQ_API_KEY_{i}" in st.secrets:
-        pool.append(st.secrets[f"GROQ_API_KEY_{i}"])
-        i += 1
-    return pool
+def _get_key(name: str) -> str | None:
+    return st.secrets.get(name, None)
 
-_GROQ_KEY_POOL = _build_key_pool()
+# Her rol için key'leri çek
+_KEY_CHAT   = [k for k in [_get_key("GROQ_API_KEY"), _get_key("GROQ_API_KEY_2")] if k]
+_KEY_VISUAL = [k for k in [_get_key("GROQ_API_KEY_3")] if k] or _KEY_CHAT
+_KEY_HACKER = [k for k in [_get_key("GROQ_API_KEY_4")] if k] or _KEY_CHAT
 
-if not _GROQ_KEY_POOL:
+if not _KEY_CHAT:
     st.error(
         "🚨 Hiçbir GROQ_API_KEY bulunamadı!\n\n"
-        "`.streamlit/secrets.toml` dosyanıza (yerelde) veya Streamlit Cloud "
-        "'Settings > Secrets' bölümüne şunları ekleyin:\n\n"
-        'GROQ_API_KEY   = "gsk_birinci_anahtariniz"\n'
-        'GROQ_API_KEY_2 = "gsk_ikinci_anahtariniz"'
+        "`.streamlit/secrets.toml` dosyanıza şunları ekleyin:\n\n"
+        'GROQ_API_KEY   = "gsk_sohbet_key_1"\n'
+        'GROQ_API_KEY_2 = "gsk_sohbet_key_2"\n'
+        'GROQ_API_KEY_3 = "gsk_gorsel_3d_key"\n'
+        'GROQ_API_KEY_4 = "gsk_hacker_kod_key"'
     )
     st.stop()
 
 
 class _GroqKeyPool:
     """
-    Round-robin + otomatik fallback ile Groq client yöneticisi.
-    - Her çağrıda sıradaki anahtarla client oluşturur (round-robin).
-    - Rate-limit veya auth hatası alınırsa bir sonraki anahtara geçer.
-    - Tüm anahtarlar tükenirse orijinal hatayı fırlatır.
+    Belirli bir key listesi üzerinde round-robin + otomatik fallback.
+    Rate-limit / auth hatası → bir sonraki anahtara geç.
     """
-
     def __init__(self, keys: list[str]):
         self._keys = keys
-        self._index = 0  # Şu an kullanılan anahtar sırası
+        self._index = 0
 
     def _client(self, idx: int) -> Groq:
         return Groq(api_key=self._keys[idx % len(self._keys)])
 
     def create(self, **kwargs):
-        """groq_client.chat.completions.create() yerine bu metodu çağır."""
-        total = len(self._keys)
+        total    = len(self._keys)
         last_exc = None
         for attempt in range(total):
             idx = (self._index + attempt) % total
             try:
                 result = self._client(idx).chat.completions.create(**kwargs)
-                # Başarılı istek → bir sonraki çağrı bir sonraki anahtarla başlasın (round-robin)
                 self._index = (idx + 1) % total
                 return result
             except Exception as e:
                 err = str(e).lower()
-                # Rate limit, kota aşımı veya auth hatası → bir sonraki anahtara geç
                 if any(k in err for k in ("rate_limit", "429", "quota", "auth", "invalid_api_key", "403")):
                     last_exc = e
-                    continue  # Bir sonraki anahtarı dene
-                # Başka bir hata (model bulunamadı, timeout vb.) → direkt fırlat
+                    continue
                 raise
-        # Tüm anahtarlar tükendi
         raise last_exc
 
 
-groq_pool = _GroqKeyPool(_GROQ_KEY_POOL)
+# Üç ayrı havuz — her biri kendi key setini kullanır
+_pool_chat   = _GroqKeyPool(_KEY_CHAT)    # sohbet
+_pool_visual = _GroqKeyPool(_KEY_VISUAL)  # görsel + 3D
+_pool_hacker = _GroqKeyPool(_KEY_HACKER)  # hacker / kod
 
 
-# Eski kodu bozmamak için groq_client adıyla bir shim tanımlıyoruz.
-# Kodun geri kalanındaki groq_client.chat.completions.create(...)
-# çağrıları otomatik olarak havuzu kullanır.
+def _groq_create(pool: _GroqKeyPool, **kwargs):
+    """Seçilen havuzu kullanarak completion isteği gönderir."""
+    return pool.create(**kwargs)
+
+
+# Eski groq_client shim'i — sadece sohbet havuzunu çağırır (legacy uyumluluk)
 class _GroqClientShim:
     class _CompletionsShim:
         class _ChatShim:
             @staticmethod
             def create(**kwargs):
-                return groq_pool.create(**kwargs)
+                return _pool_chat.create(**kwargs)
         completions = _ChatShim()
     chat = _CompletionsShim()
 
@@ -777,7 +773,9 @@ def _kisalt_gecmis_icerik(content, limit_chars=600):
 
 class SazanAIConception:
     @staticmethod
-    def _tek_istek(messages, model_cfg, max_tokens=DEFAULT_MAX_TOKENS, force_search=False):
+    def _tek_istek(messages, model_cfg, max_tokens=DEFAULT_MAX_TOKENS, force_search=False, pool=None):
+        # pool belirtilmezse varsayılan sohbet havuzu kullanılır
+        _pool = pool if pool is not None else _pool_chat
         kwargs = dict(
             model=model_cfg["id"],
             messages=messages,
@@ -789,40 +787,33 @@ class SazanAIConception:
         if effort:
             kwargs["reasoning_effort"] = effort
         if model_cfg.get("web_search"):
-            # Model, güncel/gerçek dünya bilgisi gerektiğinde otomatik olarak
-            # canlı web araması yapabilsin diye built-in browser_search aracı tanımlanır.
             kwargs["tools"] = [{"type": "browser_search"}]
-            # Anahtar kelime tespit edildiyse arama ZORUNLU, aksi halde modele bırakılır.
             kwargs["tool_choice"] = "required" if force_search else "auto"
         try:
-            return groq_client.chat.completions.create(**kwargs)
+            return _pool.create(**kwargs)
         except Exception as e:
             err_text = str(e).lower()
             if "tool" in err_text and ("support" in err_text or "unsupported" in err_text or "choice" in err_text):
-                # Bu model/servis katmanı browser_search'ü veya "required" seçimini
-                # desteklemiyor olabilir — önce "auto" ile, olmazsa hiç tool olmadan dene.
                 if kwargs.get("tool_choice") == "required":
                     kwargs["tool_choice"] = "auto"
                     try:
-                        return groq_client.chat.completions.create(**kwargs)
+                        return _pool.create(**kwargs)
                     except Exception:
                         pass
                 kwargs.pop("tools", None)
                 kwargs.pop("tool_choice", None)
                 try:
-                    return groq_client.chat.completions.create(**kwargs)
+                    return _pool.create(**kwargs)
                 except Exception:
                     pass
             if "reasoning_effort" in err_text or "unsupported" in err_text:
-                # reasoning_effort desteklemeyen bir model olabilir — onsuz tekrar dene
                 kwargs.pop("reasoning_effort", None)
-                return groq_client.chat.completions.create(**kwargs)
+                return _pool.create(**kwargs)
             if "rate_limit_exceeded" in err_text or "413" in err_text or "too large" in err_text:
-                # TPM limiti aşıldı — daha küçük bir max_tokens ile tekrar dene
                 smaller = max(MIN_MAX_TOKENS, int(max_tokens * 0.5))
                 if smaller < max_tokens:
                     kwargs["max_tokens"] = smaller
-                    return groq_client.chat.completions.create(**kwargs)
+                    return _pool.create(**kwargs)
             raise
 
     @staticmethod
@@ -909,15 +900,15 @@ class SazanAIConception:
                 messages.append({"role": m["role"], "content": _kisalt_gecmis_icerik(m["content"], limit_chars=1200)})
             messages.append({"role": "user", "content": prompt})
             try:
-                # Hacker modunda max token yüksek tut
-                res = SazanAIConception._tek_istek(messages, model_cfg, max_tokens=6000, force_search=False)
+                # Hacker modunda max token yüksek tut + özel key kullan
+                res = SazanAIConception._tek_istek(messages, model_cfg, max_tokens=6000, force_search=False, pool=_pool_hacker)
                 combined = res.choices[0].message.content or ""
                 finish_reason = res.choices[0].finish_reason
                 attempts = 0
                 while finish_reason == "length" and attempts < MAX_CONTINUATIONS:
                     messages.append({"role": "assistant", "content": combined})
                     messages.append({"role": "user", "content": "Kaldığın satırdan itibaren devam et, başa dönme."})
-                    res2 = SazanAIConception._tek_istek(messages, model_cfg, max_tokens=6000)
+                    res2 = SazanAIConception._tek_istek(messages, model_cfg, max_tokens=6000, pool=_pool_hacker)
                     combined += res2.choices[0].message.content or ""
                     finish_reason = res2.choices[0].finish_reason
                     attempts += 1
@@ -1120,7 +1111,8 @@ class SazanImageForge:
             "görsel üretim prompt'una çevir. SADECE prompt metnini döndür."
         )
         try:
-            res = groq_client.chat.completions.create(
+            res = _groq_create(
+                _pool_visual,
                 model=model_cfg["id"],
                 messages=[
                     {"role": "system", "content": sys_prompt},
@@ -1272,12 +1264,16 @@ class _NoOpCookieManager:
 
 
 def get_cookie_manager():
-    # @st.cache_resource BURAYA KONMAMALI — CookieManager bir Streamlit widget'ıdır,
-    # cache içinde çağrılınca "CachedWidgetWarning" fırlatır.
-    # Her rerun'da yeniden oluşturulması zaten hızlıdır; cache'e gerek yok.
+    # CookieManager bir Streamlit widget'ı olduğu için @st.cache_resource KULLANILMAZ
+    # (CachedWidgetWarning fırlatır). Bunun yerine session_state'e saklıyoruz —
+    # böylece her rerun'da aynı nesne kullanılır VE cookie okuma yarış koşulundan
+    # (ilk render'da henüz hazır olmaması) kaçınmak için "cookie_manager_ready" flag'i
+    # ile kontrol ediyoruz.
     if not _COOKIE_LIB_VAR:
         return _NoOpCookieManager()
-    return stx.CookieManager(key="sazan_cookie_manager")
+    if "_sazan_cookie_mgr" not in st.session_state:
+        st.session_state._sazan_cookie_mgr = stx.CookieManager(key="sazan_cookie_manager")
+    return st.session_state._sazan_cookie_mgr
 
 
 cookie_manager = get_cookie_manager()
@@ -1298,10 +1294,11 @@ def init_session_state():
         "show_image_studio": False,
         "show_print_studio": False,
         "hacker_mode": False,
-        "hacker_intro_shown": False,      # intro animasyonu bir kez gösterildi mi
-        "hacker_chat_key": "💀 Hacker Terminali",  # hacker modunun özel sohbet adı
-        "prev_chat_key": "💬 Yeni Sohbet",         # hacker öncesi hangi sohbetteydi
-        "cooldown_until": 0.0,            # epoch timestamp — bu zamana kadar bekleniyor
+        "hacker_intro_shown": False,
+        "hacker_confirm_pending": False,   # onay ekranı bekliyor mu
+        "hacker_chat_key": "💀 Hacker Terminali",
+        "prev_chat_key": "💬 Yeni Sohbet",
+        "cooldown_until": 0.0,
         "img_forge_last_result": None,
         "img_forge_enhanced_prompt": "",
         "auto_login_checked": False,
@@ -1317,8 +1314,10 @@ init_session_state()
 # ---------- "BU CİHAZDA BENİ HATIRLA" — OTOMATİK GİRİŞ DENEMESİ ----------
 # Bu blok, kullanıcı henüz giriş yapmamışsa/misafir modunda değilse ve daha önce
 # "beni hatırla" işaretlediyse, tarayıcıdaki çerezleri okuyup otomatik giriş yapar.
-# Not: streamlit çerez bileşeni ilk render'da henüz yüklenmemiş olabilir; bu yüzden
-# kontrolü "auto_login_checked" ile SADECE bir kez, sayfa ilk açıldığında deniyoruz.
+# CookieManager ilk render'da henüz hazır olmayabilir; bu yüzden:
+#  • İlk render'da (auto_login_checked=False) cookie okumayı deneriz.
+#  • Cookie None gelirse bileşen henüz yüklenmemiş demektir — bir rerun daha bekleriz.
+#  • İkinci render'da (auto_login_checked=True) zaten giriş yapılmış ya da formda devam edilir.
 if (not st.session_state.username) and (not st.session_state.guest_active) and (not st.session_state.auto_login_checked):
     try:
         remembered_email = cookie_manager.get(REMEMBER_EMAIL_COOKIE)
@@ -1326,11 +1325,14 @@ if (not st.session_state.username) and (not st.session_state.guest_active) and (
     except Exception:
         remembered_email, remembered_token = None, None
 
+    # Cookie henüz yüklenmediyse (None ve kütüphane var) — bir rerun ile bekle
+    if remembered_email is None and _COOKIE_LIB_VAR:
+        # Bileşen henüz DOM'a işlenmedi; bir rerun tetikle, flag'i hâlâ False bırak
+        st.rerun()
+
     st.session_state.auto_login_checked = True
 
     if remembered_email and remembered_token and SazanAuth.verify_remember_token(remembered_email, remembered_token):
-        # Bu cihazda daha önce "beni hatırla" ile giriş yapılmış: şifre TEKRAR
-        # SORULMADAN, direkt otomatik giriş yapılır (token geçerliyse).
         st.session_state.username = remembered_email.strip().lower()
         st.session_state.guest_active = False
         st.session_state.chat_sessions = SazanChatStore.get_sessions(st.session_state.username)
@@ -1338,9 +1340,6 @@ if (not st.session_state.username) and (not st.session_state.guest_active) and (
         st.session_state.active_model_label = "🧠 Sazan Dengeli"
         st.rerun()
     elif remembered_email:
-        # Token artık geçersiz/silinmiş olabilir (örn. başka bir cihazdan "hatırlamayı
-        # iptal et" denmiş) ama e-posta çerezi hâlâ duruyor: en azından giriş formunda
-        # e-posta alanını otomatik doldurup kullanıcıya kolaylık sağlıyoruz.
         st.session_state.remembered_email_prefill = remembered_email.strip().lower()
 
 is_member = bool(st.session_state.username)
@@ -1636,26 +1635,19 @@ with st.sidebar:
     hacker_btn_type  = "primary" if hacker_active else "secondary"
     if st.button(hacker_btn_label, use_container_width=True, type=hacker_btn_type, key="hacker_toggle_btn"):
         if not hacker_active:
-            # — MODU AÇ —
-            st.session_state.hacker_mode = True
-            st.session_state.hacker_intro_shown = False   # intro tekrar oynatılsın
-            # Şu anki normal sohbeti kaydet, hacker sohbetine geç
-            st.session_state.prev_chat_key = st.session_state.current_chat
-            hk = st.session_state.hacker_chat_key
-            # Hacker sohbeti yoksa oluştur
-            if hk not in st.session_state.chat_sessions:
-                st.session_state.chat_sessions[hk] = []
-            st.session_state.current_chat = hk
+            # Onay ekranını göster — direkt aktif etme
+            st.session_state.hacker_confirm_pending = True
+            st.rerun()
         else:
-            # — MODU KAPAT —
+            # MODU KAPAT
             st.session_state.hacker_mode = False
             st.session_state.hacker_intro_shown = False
-            # Normal sohbete geri dön
+            st.session_state.hacker_confirm_pending = False
             prev = st.session_state.get("prev_chat_key", "💬 Yeni Sohbet")
             if prev not in st.session_state.chat_sessions:
                 prev = list(st.session_state.chat_sessions.keys())[0]
             st.session_state.current_chat = prev
-        st.rerun()
+            st.rerun()
     if hacker_active:
         st.markdown(
             "<p style='text-align:center;color:#00ff41;font-size:0.72rem;margin:2px 0 0 0;'>"
@@ -1671,6 +1663,112 @@ with st.sidebar:
 # 13. ANA BAŞLIK / HACKER MODU
 # =====================================================================
 active_messages = st.session_state.chat_sessions.setdefault(st.session_state.current_chat, [])
+
+# ── HACKER ONAY EKRANI (tam ekran, butonlar çalışmadan önce) ─────────
+if st.session_state.get("hacker_confirm_pending", False):
+    st.components.v1.html(
+        """
+        <style>
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{background:#000;overflow:hidden;}
+        #cw{width:100%;height:400px;position:relative;background:#000;}
+        #cc{position:absolute;top:0;left:0;width:100%;height:100%;}
+        #cb{
+            position:absolute;top:0;left:0;width:100%;height:100%;
+            display:flex;flex-direction:column;align-items:center;justify-content:center;
+            gap:14px;pointer-events:none;
+        }
+        #skull-anim{font-size:4rem;animation:sp 1.2s ease-in-out infinite alternate;}
+        @keyframes sp{from{transform:scale(1);filter:drop-shadow(0 0 8px #00ff41);}
+                       to{transform:scale(1.12);filter:drop-shadow(0 0 22px #00ff41);}}
+        #ctitle{
+            font-family:'Share Tech Mono',monospace;font-size:2rem;
+            letter-spacing:6px;color:#00ff41;
+            text-shadow:0 0 12px #00ff41,0 0 28px #00cc33;
+            animation:glitch 3s infinite;
+        }
+        @keyframes glitch{
+            0%,91%,100%{transform:none;text-shadow:0 0 12px #00ff41,0 0 28px #00cc33;}
+            92%{transform:translate(-3px,0);text-shadow:-3px 0 #ff0066,3px 0 #00ffff;}
+            93%{transform:translate(3px,0);text-shadow:3px 0 #ff0066,-3px 0 #00ffff;}
+        }
+        #csub{
+            font-family:'Share Tech Mono',monospace;font-size:0.88rem;
+            color:#00aa30;letter-spacing:2px;text-align:center;line-height:1.7;
+            max-width:480px;
+        }
+        /* köşe braketleri */
+        .cb2{position:absolute;width:32px;height:32px;border-color:#00ff41;border-style:solid;opacity:0.55;}
+        .cb2.tl{top:12px;left:12px;border-width:2px 0 0 2px;}
+        .cb2.tr{top:12px;right:12px;border-width:2px 2px 0 0;}
+        .cb2.bl{bottom:12px;left:12px;border-width:0 0 2px 2px;}
+        .cb2.br{bottom:12px;right:12px;border-width:0 2px 2px 0;}
+        </style>
+        <div id="cw">
+          <canvas id="cc"></canvas>
+          <div class="cb2 tl"></div><div class="cb2 tr"></div>
+          <div class="cb2 bl"></div><div class="cb2 br"></div>
+          <div id="cb">
+            <div id="skull-anim">💀</div>
+            <div id="ctitle">HACKER SAZAN MODU</div>
+            <div id="csub">
+              Bu mod ayrı bir terminal sohbeti açar.<br>
+              Maksimum kalite kod motoru devreye girer.<br>
+              <span style="color:#00ff41;font-weight:bold;">Devam etmek istiyor musun?</span>
+            </div>
+          </div>
+        </div>
+        <script>
+        (function(){
+          const cv=document.getElementById('cc'),ctx=cv.getContext('2d');
+          function rs(){cv.width=cv.offsetWidth||700;cv.height=cv.offsetHeight||400;}
+          rs();window.addEventListener('resize',rs);
+          const CH='アイウエオ0123456789ABCDEF<>{}[]!@#$';
+          let dr=[];
+          function id(){dr=Array.from({length:Math.floor(cv.width/14)},()=>Math.random()*-40|0);}
+          id();
+          let sc=0;
+          function draw(){
+            const W=cv.width,H=cv.height;
+            ctx.fillStyle='rgba(0,0,0,0.83)';ctx.fillRect(0,0,W,H);
+            ctx.font='13px monospace';
+            dr.forEach((d,i)=>{
+              const ch=CH[Math.random()*CH.length|0],y=d*14;
+              ctx.fillStyle='rgba(160,255,160,0.85)';ctx.fillText(ch,i*14,y);
+              ctx.fillStyle='rgba(0,130,40,0.25)';ctx.fillText(CH[Math.random()*CH.length|0],i*14,y-14);
+              if(y>H&&Math.random()>0.975)dr[i]=0; dr[i]++;
+            });
+            sc=(sc+1.1)%H;
+            const sg=ctx.createLinearGradient(0,sc-5,0,sc+5);
+            sg.addColorStop(0,'rgba(0,255,65,0)');sg.addColorStop(0.5,'rgba(0,255,65,0.12)');sg.addColorStop(1,'rgba(0,255,65,0)');
+            ctx.fillStyle=sg;ctx.fillRect(0,sc-5,W,10);
+            requestAnimationFrame(draw);
+          }
+          draw();
+        })();
+        </script>
+        """,
+        height=408,
+    )
+
+    col_yes, col_no = st.columns(2)
+    with col_yes:
+        if st.button("✅ EVET — Hacker Modunu Aç", use_container_width=True, type="primary", key="hacker_confirm_yes"):
+            st.session_state.hacker_confirm_pending = False
+            st.session_state.hacker_mode = True
+            st.session_state.hacker_intro_shown = False
+            st.session_state.prev_chat_key = st.session_state.current_chat
+            hk = st.session_state.hacker_chat_key
+            if hk not in st.session_state.chat_sessions:
+                st.session_state.chat_sessions[hk] = []
+            st.session_state.current_chat = hk
+            st.rerun()
+    with col_no:
+        if st.button("❌ HAYIR — Normal Sohbete Devam Et", use_container_width=True, type="secondary", key="hacker_confirm_no"):
+            st.session_state.hacker_confirm_pending = False
+            st.rerun()
+    st.stop()  # onay ekranındayken altta başka bir şey render edilmesin
 
 # ── HACKER SAZAN MODU AÇILIŞ EKRANI ──────────────────────────────────
 if st.session_state.get("hacker_mode", False):
