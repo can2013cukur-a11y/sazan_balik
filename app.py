@@ -1298,6 +1298,10 @@ def init_session_state():
         "show_image_studio": False,
         "show_print_studio": False,
         "hacker_mode": False,
+        "hacker_intro_shown": False,      # intro animasyonu bir kez gösterildi mi
+        "hacker_chat_key": "💀 Hacker Terminali",  # hacker modunun özel sohbet adı
+        "prev_chat_key": "💬 Yeni Sohbet",         # hacker öncesi hangi sohbetteydi
+        "cooldown_until": 0.0,            # epoch timestamp — bu zamana kadar bekleniyor
         "img_forge_last_result": None,
         "img_forge_enhanced_prompt": "",
         "auto_login_checked": False,
@@ -1631,12 +1635,31 @@ with st.sidebar:
     hacker_btn_label = "🟢 HACKER MODU AKTİF" if hacker_active else "💀 Hacker Sazan Modunu Aç"
     hacker_btn_type  = "primary" if hacker_active else "secondary"
     if st.button(hacker_btn_label, use_container_width=True, type=hacker_btn_type, key="hacker_toggle_btn"):
-        st.session_state.hacker_mode = not hacker_active
+        if not hacker_active:
+            # — MODU AÇ —
+            st.session_state.hacker_mode = True
+            st.session_state.hacker_intro_shown = False   # intro tekrar oynatılsın
+            # Şu anki normal sohbeti kaydet, hacker sohbetine geç
+            st.session_state.prev_chat_key = st.session_state.current_chat
+            hk = st.session_state.hacker_chat_key
+            # Hacker sohbeti yoksa oluştur
+            if hk not in st.session_state.chat_sessions:
+                st.session_state.chat_sessions[hk] = []
+            st.session_state.current_chat = hk
+        else:
+            # — MODU KAPAT —
+            st.session_state.hacker_mode = False
+            st.session_state.hacker_intro_shown = False
+            # Normal sohbete geri dön
+            prev = st.session_state.get("prev_chat_key", "💬 Yeni Sohbet")
+            if prev not in st.session_state.chat_sessions:
+                prev = list(st.session_state.chat_sessions.keys())[0]
+            st.session_state.current_chat = prev
         st.rerun()
     if hacker_active:
         st.markdown(
             "<p style='text-align:center;color:#00ff41;font-size:0.72rem;margin:2px 0 0 0;'>"
-            "⚡ Sadece kod yaz · Maksimum kalite</p>",
+            "⚡ Hacker terminali aktif · Ayrı sohbet</p>",
             unsafe_allow_html=True,
         )
 
@@ -1651,219 +1674,287 @@ active_messages = st.session_state.chat_sessions.setdefault(st.session_state.cur
 
 # ── HACKER SAZAN MODU AÇILIŞ EKRANI ──────────────────────────────────
 if st.session_state.get("hacker_mode", False):
-    st.components.v1.html(
-        """
-        <style>
+
+    # Intro animasyonu — sadece ilk açılışta tam ekran oynatılır
+    if not st.session_state.get("hacker_intro_shown", False):
+        st.components.v1.html(
+            """
+            <style>
             @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
-            * { margin:0; padding:0; box-sizing:border-box; }
-            body { background:#000; overflow:hidden; }
+            *{margin:0;padding:0;box-sizing:border-box;}
+            body{background:#000;overflow:hidden;}
+            #intro-wrap{
+                width:100%;height:420px;position:relative;
+                background:#000;overflow:hidden;
+                display:flex;align-items:center;justify-content:center;
+            }
+            #ic{display:block;position:absolute;top:0;left:0;width:100%;height:100%;}
 
-            #hz-canvas { display:block; width:100%; height:340px; }
+            /* ── merkez kutu ── */
+            #intro-box{
+                position:relative;z-index:10;
+                display:flex;flex-direction:column;align-items:center;gap:10px;
+                animation: boxReveal 0.6s ease-out both;
+            }
+            @keyframes boxReveal{from{opacity:0;transform:scale(0.7);}to{opacity:1;transform:scale(1);}}
 
-            #hz-overlay {
-                position:absolute; top:0; left:0; width:100%; height:340px;
-                display:flex; flex-direction:column;
-                align-items:center; justify-content:center;
-                pointer-events:none;
-            }
-            #hz-title {
-                font-family:'Share Tech Mono', monospace;
-                font-size:2.4rem; font-weight:700; letter-spacing:6px;
-                color:#00ff41;
-                text-shadow: 0 0 10px #00ff41, 0 0 30px #00ff41, 0 0 60px #00cc33;
-                animation: glitch 2.5s infinite;
-            }
-            #hz-sub {
-                font-family:'Share Tech Mono', monospace;
-                font-size:1rem; color:#00cc33; letter-spacing:3px; margin-top:10px;
-                text-shadow: 0 0 8px #00cc33;
-                opacity:0.85;
-            }
-            #hz-badge {
-                margin-top:18px;
-                font-family:'Share Tech Mono', monospace;
-                font-size:0.75rem; color:#004d14;
-                background:#00ff41; padding:5px 18px; border-radius:4px;
-                letter-spacing:2px; box-shadow: 0 0 18px #00ff41;
-            }
-            @keyframes glitch {
-                0%,95%,100% { text-shadow: 0 0 10px #00ff41, 0 0 30px #00ff41, 0 0 60px #00cc33; transform:translate(0,0); }
-                96%          { text-shadow: -3px 0 #ff0066, 3px 0 #00ffff; transform:translate(-2px,1px); }
-                97%          { text-shadow:  3px 0 #ff0066,-3px 0 #00ffff; transform:translate( 2px,-1px); }
-                98%          { text-shadow: -2px 0 #00ffff, 2px 0 #ff0066; transform:translate( 1px, 2px); }
-            }
-        </style>
+            #skull{font-size:5rem;animation:skullPulse 1s ease-in-out infinite alternate;}
+            @keyframes skullPulse{from{text-shadow:0 0 20px #00ff41,0 0 40px #00ff41;}
+                                   to{text-shadow:0 0 40px #00ff41,0 0 80px #00cc33,0 0 120px #009922;}}
 
-        <div style="position:relative;width:100%;height:340px;background:#000;">
-            <canvas id="hz-canvas"></canvas>
-            <div id="hz-overlay">
-                <div id="hz-title">💀 HACKER SAZAN MODU</div>
-                <div id="hz-sub">⚡ AÇILDI — KOD MAKİNESİ HAZIR ⚡</div>
-                <div id="hz-badge">MAXIMUM CODE QUALITY UNLOCKED</div>
+            #main-title{
+                font-family:'Share Tech Mono',monospace;
+                font-size:2.8rem;font-weight:700;letter-spacing:8px;color:#00ff41;
+                text-shadow:0 0 15px #00ff41,0 0 35px #00ff41,0 0 70px #00cc33;
+                animation:glitch 3s infinite;
+                white-space:nowrap;
+            }
+            @keyframes glitch{
+                0%,90%,100%{text-shadow:0 0 15px #00ff41,0 0 35px #00ff41;transform:none;}
+                91%{text-shadow:-4px 0 #ff0066,4px 0 #00ffff;transform:translate(-3px,1px);}
+                92%{text-shadow: 4px 0 #ff0066,-4px 0 #00ffff;transform:translate(3px,-1px);}
+                93%{text-shadow:-2px 0 #00ffff,2px 0 #ff0066;transform:translate(1px,2px);}
+                94%{text-shadow:0 0 15px #00ff41;transform:none;}
+            }
+            #sub-title{
+                font-family:'Share Tech Mono',monospace;
+                font-size:1.1rem;letter-spacing:4px;color:#00cc33;
+                text-shadow:0 0 10px #00cc33;
+                animation:fadeInSub 0.5s 0.4s both;
+            }
+            @keyframes fadeInSub{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+
+            /* tipler */
+            #typed-line{
+                font-family:'Share Tech Mono',monospace;
+                font-size:0.9rem;color:#00ff41;letter-spacing:2px;
+                min-height:1.4em;
+                text-shadow:0 0 8px #00ff41;
+            }
+            #typed-line::after{content:'█';animation:blink 0.7s infinite;}
+            @keyframes blink{0%,100%{opacity:1;}50%{opacity:0;}}
+
+            /* ilerleyiş çubuğu */
+            #prog-wrap{
+                width:380px;height:6px;border-radius:4px;
+                background:rgba(0,255,65,0.12);
+                border:1px solid rgba(0,255,65,0.3);
+                overflow:hidden;
+                animation:fadeInSub 0.4s 0.6s both;
+            }
+            #prog-bar{
+                height:100%;width:0%;border-radius:4px;
+                background:linear-gradient(90deg,#00ff41,#00cc33);
+                box-shadow:0 0 12px #00ff41;
+                transition:width 0.05s linear;
+            }
+
+            #badge{
+                font-family:'Share Tech Mono',monospace;
+                font-size:0.75rem;color:#000;
+                background:#00ff41;padding:5px 22px;border-radius:4px;
+                letter-spacing:3px;box-shadow:0 0 20px #00ff41;
+                opacity:0;animation:badgePop 0.4s 2.6s ease-out forwards;
+            }
+            @keyframes badgePop{from{opacity:0;transform:scale(0.6);}to{opacity:1;transform:scale(1);}}
+            </style>
+
+            <div id="intro-wrap">
+              <canvas id="ic"></canvas>
+              <div id="intro-box">
+                <div id="skull">💀</div>
+                <div id="main-title">HACKER MODU AKTİF</div>
+                <div id="sub-title">⚡ SAZAN HACK SİSTEMİ v2.0 ⚡</div>
+                <div id="typed-line"></div>
+                <div id="prog-wrap"><div id="prog-bar"></div></div>
+                <div id="badge">MAXIMUM CODE QUALITY UNLOCKED</div>
+              </div>
             </div>
-        </div>
 
-        <script>
-        (function(){
-            const canvas = document.getElementById('hz-canvas');
-            const ctx    = canvas.getContext('2d');
-
-            function resize(){
-                canvas.width  = canvas.offsetWidth  || 700;
-                canvas.height = canvas.offsetHeight || 340;
-            }
-            resize();
-            window.addEventListener('resize', resize);
-
-            /* ── Matrix rain ── */
-            const COLS_CH = 'アイウエオカキクケコ0123456789ABCDEF<>{}[]()!@#$%^&*';
-            let cols, drops;
-
-            function initMatrix(){
-                const fontSize = 14;
-                cols  = Math.floor(canvas.width / fontSize);
-                drops = Array.from({length: cols}, () => Math.random() * -canvas.height / fontSize | 0);
-            }
-            initMatrix();
-
-            /* ── Floating code particles ── */
-            const SNIPPETS = [
-                'import os', 'def hack():', 'while True:', 'SELECT *',
-                'git push', 'sudo rm -rf', '0xDEADBEEF', 'chmod +x',
-                'ssh root@', 'curl -X POST', 'docker run', 'kubectl apply',
-                '#!/bin/bash', 'async def', 'Promise.all', 'malloc(512)',
-                'XOR eax,eax', 'INT 0x80', 'RSA_2048', 'AES-256-GCM',
-            ];
-            const particles = Array.from({length: 22}, () => ({
-                x: Math.random() * 700,
-                y: Math.random() * 340,
-                vx: (Math.random() - 0.5) * 0.6,
-                vy: (Math.random() - 0.5) * 0.4,
-                text: SNIPPETS[Math.random() * SNIPPETS.length | 0],
-                alpha: Math.random() * 0.5 + 0.15,
-                size: Math.random() * 9 + 9,
-            }));
-
-            /* ── Scan line ── */
-            let scanY = 0;
-
-            /* ── Hexagon grid ── */
-            function hexPath(cx, cy, r){
-                ctx.beginPath();
-                for(let i=0;i<6;i++){
-                    const a = Math.PI/3*i - Math.PI/6;
-                    i===0 ? ctx.moveTo(cx+r*Math.cos(a), cy+r*Math.sin(a))
-                          : ctx.lineTo(cx+r*Math.cos(a), cy+r*Math.sin(a));
-                }
-                ctx.closePath();
-            }
-
-            let frame = 0;
-            function draw(){
-                const W = canvas.width, H = canvas.height;
-                const fontSize = 14;
-
-                /* Background */
-                ctx.fillStyle = 'rgba(0,0,0,0.82)';
-                ctx.fillRect(0,0,W,H);
-
-                /* Matrix rain */
-                ctx.font = fontSize+'px monospace';
-                for(let i=0;i<cols;i++){
-                    const ch = COLS_CH[Math.random()*COLS_CH.length|0];
-                    const y  = drops[i]*fontSize;
-                    /* bright head */
-                    ctx.fillStyle = `rgba(180,255,180,${0.8+0.2*Math.sin(frame*0.05+i)})`;
-                    ctx.fillText(ch, i*fontSize, y);
-                    /* trail */
-                    ctx.fillStyle = `rgba(0,${100+Math.random()*155|0},${40+Math.random()*40|0},0.35)`;
-                    ctx.fillText(COLS_CH[Math.random()*COLS_CH.length|0], i*fontSize, y-fontSize);
-
-                    if(drops[i]*fontSize > H && Math.random()>0.975) drops[i]=0;
-                    drops[i]++;
-                }
-
-                /* Hex grid overlay */
-                const hexR = 28, hexW = hexR*Math.sqrt(3), hexH = hexR*2;
-                for(let row=-1; row<H/hexH*1.5; row++){
-                    for(let col=-1; col<W/hexW*1.2; col++){
-                        const cx = col*hexW + (row%2===0?0:hexW/2);
-                        const cy = row*hexH*0.75;
-                        hexPath(cx,cy,hexR-1);
-                        ctx.strokeStyle = `rgba(0,255,65,${0.04+0.02*Math.sin(frame*0.02+col+row)})`;
-                        ctx.lineWidth = 0.5;
-                        ctx.stroke();
-                    }
-                }
-
-                /* Floating code snippets */
-                ctx.font = '11px "Share Tech Mono",monospace';
-                particles.forEach(p => {
-                    p.x += p.vx; p.y += p.vy;
-                    if(p.x<-120) p.x=W+20;
-                    if(p.x>W+20) p.x=-120;
-                    if(p.y<-20)  p.y=H+10;
-                    if(p.y>H+10) p.y=-20;
-                    const glow = 0.3+0.2*Math.sin(frame*0.04+p.x*0.01);
-                    ctx.globalAlpha = p.alpha * glow;
-                    ctx.fillStyle   = '#00ff41';
-                    ctx.shadowColor = '#00ff41';
-                    ctx.shadowBlur  = 8;
-                    ctx.fillText(p.text, p.x, p.y);
-                    ctx.globalAlpha = 1;
-                    ctx.shadowBlur  = 0;
+            <script>
+            (function(){
+              /* ── Matrix arka plan ── */
+              const cv=document.getElementById('ic');
+              const ctx=cv.getContext('2d');
+              function resize(){cv.width=cv.offsetWidth||700;cv.height=cv.offsetHeight||420;}
+              resize(); window.addEventListener('resize',resize);
+              const CH='アイウエオ0123456789ABCDEF<>{}[]!@#$';
+              let drops=[];
+              function initDrops(){drops=Array.from({length:Math.floor(cv.width/14)},()=>Math.random()*-50|0);}
+              initDrops();
+              function drawMatrix(){
+                ctx.fillStyle='rgba(0,0,0,0.85)';ctx.fillRect(0,0,cv.width,cv.height);
+                ctx.font='13px monospace';
+                drops.forEach((d,i)=>{
+                  const ch=CH[Math.random()*CH.length|0];
+                  const y=d*14;
+                  ctx.fillStyle=`rgba(200,255,200,0.9)`;ctx.fillText(ch,i*14,y);
+                  ctx.fillStyle=`rgba(0,180,50,0.3)`;ctx.fillText(CH[Math.random()*CH.length|0],i*14,y-14);
+                  if(y>cv.height&&Math.random()>0.97)drops[i]=0; drops[i]++;
                 });
+                requestAnimationFrame(drawMatrix);
+              }
+              drawMatrix();
 
-                /* Scan line */
-                scanY = (scanY + 1.2) % H;
-                const sg = ctx.createLinearGradient(0,scanY-8,0,scanY+8);
-                sg.addColorStop(0,   'rgba(0,255,65,0)');
-                sg.addColorStop(0.5, 'rgba(0,255,65,0.18)');
-                sg.addColorStop(1,   'rgba(0,255,65,0)');
-                ctx.fillStyle = sg;
-                ctx.fillRect(0, scanY-8, W, 16);
+              /* ── Typing efekti + progress ── */
+              const LINES=[
+                'ACCESS GRANTED...',
+                'LOADING ELITE CODE ENGINE...',
+                'INJECTING HACKER PROTOCOL...',
+                'MAXIMUM QUALITY MODE ON ✓',
+              ];
+              const typed=document.getElementById('typed-line');
+              const bar=document.getElementById('prog-bar');
+              let li=0,ci=0,prog=0;
+              const TOTAL_MS=2600;
+              const startT=performance.now();
 
-                /* Corner brackets */
-                ctx.strokeStyle='rgba(0,255,65,0.7)';
-                ctx.lineWidth=2;
-                const b=18, bl=38;
-                [[b,b,1,1],[W-b,b,-1,1],[b,H-b,1,-1],[W-b,H-b,-1,-1]].forEach(([x,y,dx,dy])=>{
-                    ctx.beginPath(); ctx.moveTo(x,y+dy*bl); ctx.lineTo(x,y); ctx.lineTo(x+dx*bl,y); ctx.stroke();
-                });
+              function typeNext(){
+                if(li>=LINES.length)return;
+                const line=LINES[li];
+                if(ci<line.length){
+                  typed.textContent=line.slice(0,ci+1);
+                  ci++;
+                  setTimeout(typeNext, 38+Math.random()*22);
+                } else {
+                  ci=0; li++;
+                  if(li<LINES.length) setTimeout(typeNext,220);
+                  else typed.textContent=LINES[LINES.length-1];
+                }
+              }
+              typeNext();
 
-                frame++;
-                requestAnimationFrame(draw);
+              function tickBar(){
+                const elapsed=performance.now()-startT;
+                prog=Math.min(100,elapsed/TOTAL_MS*100);
+                bar.style.width=prog+'%';
+                if(prog<100) requestAnimationFrame(tickBar);
+              }
+              tickBar();
+            })();
+            </script>
+            """,
+            height=430,
+        )
+        # Intro gösterildi, bir daha render edilmesin
+        st.session_state.hacker_intro_shown = True
+        # 0.1s bekle ve rerun ile matrix moduna geç
+        time.sleep(3.2)
+        st.rerun()
+
+    else:
+        # ── Intro bitti, kalıcı matrix + HUD ──
+        st.components.v1.html(
+            """
+            <style>
+            @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+            *{margin:0;padding:0;box-sizing:border-box;}
+            body{background:#000;overflow:hidden;}
+            #mwrap{width:100%;height:280px;position:relative;background:#000;}
+            #mc{display:block;width:100%;height:100%;}
+            #mhud{
+                position:absolute;top:0;left:0;width:100%;height:100%;
+                display:flex;flex-direction:column;
+                justify-content:center;align-items:center;
+                pointer-events:none;gap:6px;
             }
-            draw();
-        })();
-        </script>
-        """,
-        height=345,
-    )
-
-    st.markdown(
-        """
-        <style>
-        .hacker-tip {
-            background: linear-gradient(90deg,#001a00,#002600,#001a00);
-            border: 1px solid #00ff41;
-            border-radius: 10px;
-            padding: 10px 20px;
-            font-family: 'Share Tech Mono', monospace;
-            color: #00ff41;
-            font-size: 0.82rem;
-            text-align: center;
-            box-shadow: 0 0 18px rgba(0,255,65,0.25);
-            margin-bottom: 6px;
-        }
-        </style>
-        <div class="hacker-tip">
-            💻 Kod modundasın — ne yazmak istersen yaz, saf kod gelir.<br>
-            <span style="color:#007a20;">Sohbete dönmek için soldaki butona bas.</span>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+            #mhud-title{
+                font-family:'Share Tech Mono',monospace;
+                font-size:1.6rem;letter-spacing:6px;color:#00ff41;
+                text-shadow:0 0 10px #00ff41,0 0 25px #00cc33;
+                animation:glitch2 4s infinite;
+            }
+            @keyframes glitch2{
+                0%,92%,100%{transform:none;text-shadow:0 0 10px #00ff41,0 0 25px #00cc33;}
+                93%{transform:translate(-2px,0);text-shadow:-3px 0 #ff0066,3px 0 #00ffff;}
+                94%{transform:translate(2px,0);text-shadow:3px 0 #ff0066,-3px 0 #00ffff;}
+            }
+            #mhud-sub{
+                font-family:'Share Tech Mono',monospace;font-size:0.72rem;
+                color:#007a20;letter-spacing:3px;
+            }
+            /* corner brackets */
+            .cb{position:absolute;width:30px;height:30px;border-color:#00ff41;border-style:solid;opacity:0.6;}
+            .cb.tl{top:10px;left:10px;border-width:2px 0 0 2px;}
+            .cb.tr{top:10px;right:10px;border-width:2px 2px 0 0;}
+            .cb.bl{bottom:10px;left:10px;border-width:0 0 2px 2px;}
+            .cb.br{bottom:10px;right:10px;border-width:0 2px 2px 0;}
+            </style>
+            <div id="mwrap">
+              <canvas id="mc"></canvas>
+              <div class="cb tl"></div><div class="cb tr"></div>
+              <div class="cb bl"></div><div class="cb br"></div>
+              <div id="mhud">
+                <div id="mhud-title">💀 HACKER SAZAN MODU</div>
+                <div id="mhud-sub">⚡ KOD MAKİNESİ HAZIR — YAZAR BEKLENIYOR ⚡</div>
+              </div>
+            </div>
+            <script>
+            (function(){
+              const cv=document.getElementById('mc');
+              const ctx=cv.getContext('2d');
+              function resize(){cv.width=cv.offsetWidth||700;cv.height=cv.offsetHeight||280;}
+              resize();window.addEventListener('resize',resize);
+              const CH='アイウエオ0123456789ABCDEF<>{}[]!@#$%^';
+              let drops=[];
+              function init(){drops=Array.from({length:Math.floor(cv.width/14)},()=>Math.random()*-40|0);}
+              init();
+              /* floating code particles */
+              const SN=['import os','def hack():','while True:','SELECT *','git push',
+                        '0xDEAD','chmod +x','ssh root@','docker run','AES-256','RSA_2048',
+                        'malloc(512)','XOR eax','async def','Promise.all'];
+              const pts=Array.from({length:18},()=>({
+                x:Math.random()*700,y:Math.random()*280,
+                vx:(Math.random()-0.5)*0.5,vy:(Math.random()-0.5)*0.35,
+                t:SN[Math.random()*SN.length|0],a:Math.random()*0.4+0.1,
+              }));
+              let sc=0,frame=0;
+              function draw(){
+                const W=cv.width,H=cv.height;
+                ctx.fillStyle='rgba(0,0,0,0.84)';ctx.fillRect(0,0,W,H);
+                ctx.font='13px monospace';
+                drops.forEach((d,i)=>{
+                  const ch=CH[Math.random()*CH.length|0];
+                  const y=d*14;
+                  ctx.fillStyle='rgba(180,255,180,0.85)';ctx.fillText(ch,i*14,y);
+                  ctx.fillStyle='rgba(0,150,40,0.28)';ctx.fillText(CH[Math.random()*CH.length|0],i*14,y-14);
+                  if(y>H&&Math.random()>0.975)drops[i]=0; drops[i]++;
+                });
+                /* hex grid */
+                const hr=24,hw=hr*Math.sqrt(3),hh=hr*2;
+                ctx.lineWidth=0.4;
+                for(let r=-1;r<H/hh*1.5;r++)for(let c=-1;c<W/hw*1.2;c++){
+                  const cx=c*hw+(r%2?hw/2:0),cy=r*hh*0.75;
+                  ctx.beginPath();
+                  for(let k=0;k<6;k++){const a=Math.PI/3*k-Math.PI/6;k?ctx.lineTo(cx+hr*Math.cos(a),cy+hr*Math.sin(a)):ctx.moveTo(cx+hr*Math.cos(a),cy+hr*Math.sin(a));}
+                  ctx.closePath();
+                  ctx.strokeStyle=`rgba(0,255,65,${0.03+0.015*Math.sin(frame*0.02+c+r)})`;
+                  ctx.stroke();
+                }
+                /* particles */
+                ctx.font='10px "Share Tech Mono",monospace';
+                pts.forEach(p=>{
+                  p.x+=p.vx;p.y+=p.vy;
+                  if(p.x<-100)p.x=W+10; if(p.x>W+10)p.x=-100;
+                  if(p.y<-15)p.y=H+5;   if(p.y>H+5)p.y=-15;
+                  ctx.globalAlpha=p.a*(0.4+0.3*Math.sin(frame*0.05+p.x*0.01));
+                  ctx.fillStyle='#00ff41';ctx.shadowColor='#00ff41';ctx.shadowBlur=6;
+                  ctx.fillText(p.t,p.x,p.y);
+                  ctx.globalAlpha=1;ctx.shadowBlur=0;
+                });
+                /* scan line */
+                sc=(sc+1.0)%H;
+                const sg=ctx.createLinearGradient(0,sc-6,0,sc+6);
+                sg.addColorStop(0,'rgba(0,255,65,0)');sg.addColorStop(0.5,'rgba(0,255,65,0.14)');sg.addColorStop(1,'rgba(0,255,65,0)');
+                ctx.fillStyle=sg;ctx.fillRect(0,sc-6,W,12);
+                frame++;requestAnimationFrame(draw);
+              }
+              draw();
+            })();
+            </script>
+            """,
+            height=285,
+        )
 
 if not active_messages and not st.session_state.get("hacker_mode", False):
     st.markdown(
@@ -2218,34 +2309,110 @@ if is_member:
 # =====================================================================
 # 17. SOHBET GİRDİSİ VE YANIT MOTORU
 # =====================================================================
-_is_hacker = st.session_state.get("hacker_mode", False)
-_chat_placeholder = "💀 Kod yaz, hack et, inşa et..." if _is_hacker else "Sazan AI'a bir şey sor..."
-typed_prompt = st.chat_input(_chat_placeholder)
-prompt = typed_prompt or st.session_state.pending_prompt
-if st.session_state.pending_prompt and not typed_prompt:
-    st.session_state.pending_prompt = None
+_is_hacker   = st.session_state.get("hacker_mode", False)
+_COOLDOWN_S  = 60          # saniye
+_CODE_LANGS  = {           # bu dil etiketleri "kod yanıtı" sayılır
+    "python","py","javascript","js","typescript","ts","html","css","bash","sh",
+    "java","cpp","c","cs","go","rust","rs","php","ruby","rb","sql","kotlin","swift",
+    "json","yaml","yml","toml","dockerfile","docker","terraform","tf","r","scala","lua",
+}
 
-if prompt:
-    active_messages.append({"role": "user", "content": prompt})
+# ── Cooldown durumu ──────────────────────────────────────────────────
+_now          = time.time()
+_cooldown_end = st.session_state.get("cooldown_until", 0.0)
+_remaining    = max(0.0, _cooldown_end - _now)
+_in_cooldown  = _remaining > 0
 
-    model_label = st.session_state.active_model_label if is_member else GUEST_MODEL_LABEL
-    model_cfg = AI_MODELS.get(model_label, AI_MODELS[GUEST_MODEL_LABEL])
+if _in_cooldown:
+    # Kalan süreyi göster — Streamlit'in auto-rerun mekanizması olmadığı için
+    # st.empty() + time.sleep(1) döngüsüyle gerçek zamanlı sayaç çiziyoruz
+    _cd_placeholder = st.empty()
+    _cd_bar         = st.empty()
 
-    _spinner_text = "💀 Kod derleniyor..." if _is_hacker else "Sazan AI düşünüyor..."
-    with st.spinner(_spinner_text):
-        cur_lang = st.session_state.get("active_lang_code", "Türkçe 🇹🇷")
-        ans = SazanAIConception.query_agent(
-            prompt, active_messages, cur_lang, model_cfg,
-            hacker_mode=_is_hacker,
+    # Her saniye güncelle; toplam kalan süreyi hesapla
+    _elapsed_in_block = 0
+    _total_wait       = int(_remaining) + 1
+    for _tick in range(_total_wait):
+        _secs_left = max(0, int(_cooldown_end - time.time()))
+        _pct       = _secs_left / _COOLDOWN_S
+
+        _cd_placeholder.markdown(
+            f"""
+            <div style="
+                background:linear-gradient(135deg,#0d1117,#0a1a0a);
+                border:1px solid {'#00ff41' if _is_hacker else '#f97316'};
+                border-radius:12px;padding:16px 24px;text-align:center;
+                box-shadow:0 0 20px {'rgba(0,255,65,0.15)' if _is_hacker else 'rgba(249,115,22,0.15)'};
+                font-family:{'Share Tech Mono,monospace' if _is_hacker else 'inherit'};
+            ">
+                <div style="font-size:2.2rem;margin-bottom:4px;">⏳</div>
+                <div style="font-size:1.6rem;font-weight:700;
+                    color:{'#00ff41' if _is_hacker else '#f97316'};
+                    text-shadow:{'0 0 10px #00ff41' if _is_hacker else 'none'};">
+                    {_secs_left:02d} saniye
+                </div>
+                <div style="color:#888;font-size:0.82rem;margin-top:4px;">
+                    {'💀 Kod motoru soğuyor — bir sonraki istek için bekle' if _is_hacker else '🐟 Sazan AI soğuyor — biraz bekle'}
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
-        active_messages.append({"role": "assistant", "content": ans})
+        _cd_bar.markdown(
+            f"""
+            <div style="height:6px;border-radius:4px;background:rgba(255,255,255,0.08);overflow:hidden;margin-top:4px;">
+              <div style="height:100%;width:{_pct*100:.1f}%;border-radius:4px;
+                background:{'linear-gradient(90deg,#00ff41,#00cc33)' if _is_hacker else 'linear-gradient(90deg,#f97316,#facc15)'};
+                transition:width 0.9s linear;
+                box-shadow:{'0 0 8px #00ff41' if _is_hacker else '0 0 8px #f97316'};"></div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
-        html_blocks = re.findall(r"```html\s*(.*?)\s*```", ans, re.DOTALL)
-        if html_blocks and is_member:
-            entry = SazanGameLibrary.add_game(user, prompt, html_blocks[0])
-            st.toast(f"📚 Oyun kütüphaneye kaydedildi: {entry['title']}")
+        if _secs_left <= 0:
+            break
+        time.sleep(1)
 
-        if is_member:
-            SazanChatStore.save_sessions(user, st.session_state.chat_sessions)
+    _cd_placeholder.empty()
+    _cd_bar.empty()
+    st.session_state.cooldown_until = 0.0
+    st.rerun()
 
-        st.rerun()
+else:
+    # ── Normal giriş akışı ────────────────────────────────────────────
+    _chat_placeholder = "💀 Kod yaz, hack et, inşa et..." if _is_hacker else "Sazan AI'a bir şey sor..."
+    typed_prompt = st.chat_input(_chat_placeholder)
+    prompt = typed_prompt or st.session_state.pending_prompt
+    if st.session_state.pending_prompt and not typed_prompt:
+        st.session_state.pending_prompt = None
+
+    if prompt:
+        active_messages.append({"role": "user", "content": prompt})
+
+        model_label = st.session_state.active_model_label if is_member else GUEST_MODEL_LABEL
+        model_cfg   = AI_MODELS.get(model_label, AI_MODELS[GUEST_MODEL_LABEL])
+
+        _spinner_text = "💀 Kod derleniyor..." if _is_hacker else "Sazan AI düşünüyor..."
+        with st.spinner(_spinner_text):
+            cur_lang = st.session_state.get("active_lang_code", "Türkçe 🇹🇷")
+            ans = SazanAIConception.query_agent(
+                prompt, active_messages, cur_lang, model_cfg,
+                hacker_mode=_is_hacker,
+            )
+            active_messages.append({"role": "assistant", "content": ans})
+
+            # ── Kod yanıtı mı? → cooldown başlat ──────────────────────
+            _found_langs = set(re.findall(r"```(\w+)", ans))
+            if _found_langs & _CODE_LANGS:
+                st.session_state.cooldown_until = time.time() + _COOLDOWN_S
+
+            html_blocks = re.findall(r"```html\s*(.*?)\s*```", ans, re.DOTALL)
+            if html_blocks and is_member:
+                entry = SazanGameLibrary.add_game(user, prompt, html_blocks[0])
+                st.toast(f"📚 Oyun kütüphaneye kaydedildi: {entry['title']}")
+
+            if is_member:
+                SazanChatStore.save_sessions(user, st.session_state.chat_sessions)
+
+            st.rerun()
