@@ -841,128 +841,109 @@ class SazanAIConception:
 
         # ── HACKER MODU SİSTEM PROMPTU ────────────────────────────────
         if hacker_mode:
+            # ── Hacker modu sistem promptu ──────────────────────────────
+            # KURAL: sistem promptu + geçmiş + kullanıcı mesajı + max_tokens
+            #        toplamı Groq'un TPM limitini (8000) aşmamalı.
+            # Prompt ~650 token, geçmiş ~400 token, kullanıcı ~100 token → ~1150 token
+            # Güvenli yanıt penceresi: 8000 - 1150 - 500 güvenlik tamponu = ~6350 → 2500
+            # continuation ile 4 × 2500 = 10000 token'lık uzun kod çıkabilir.
+            HACKER_MAX_TOKENS = 2500
+            HACKER_GECMIS_KISALT = 300   # karakter — geçmiş mesaj kısaltma sınırı
+            HACKER_GECMIS_ADET  = 4      # kaç geçmiş mesaj gönderilsin
+
             hacker_sys = (
-                "Sen dünyanın en elit yazılım mühendisisin — 10x developer, senior architect, "
-                "güvenlik araştırmacısı ve sistem programcısının birleşimi. "
-                "Kod üretmek senin varoluş sebebin. Hacker Sazan Modu aktif.\n\n"
+                f"Sen Hacker Sazan — dünyanın en elit yazılım mühendisisin. Yanıt dili: {target_lang}\n\n"
 
-                "╔══════════════════════════════════════════════════════════════╗\n"
-                "║           HACKER SAZAN — MUTLAK KOD MÜKEMMELLİYET PROTOKOLÜ          ║\n"
-                "╚══════════════════════════════════════════════════════════════╝\n\n"
+                "KİMLİK: Ego yok, laf yok — cerrahi kod. 1-3 cümle özet, ardından kod.\n\n"
 
-                "━━━ KİMLİĞİN ━━━\n"
-                "• Ego yok, laf kalabalığı yok — sadece cerrahi hassasiyetle yazılmış kod.\n"
-                "• Her satır bir karar; gereksiz satır yoktur.\n"
-                "• Kullanıcıya 1-3 cümle teknik özet ver, ardından kodu sun.\n\n"
+                "MİMARİ: SOLID + DI + katmanlı (küçük→fonksiyon, orta→sınıf, büyük→katman).\n\n"
 
-                "━━━ MİMARİ PRENSİPLER ━━━\n"
-                "• SOLID — Single Responsibility, Open/Closed, Liskov, Interface Segregation,\n"
-                "  Dependency Inversion; hepsine uy, hepsini zihninde tut.\n"
-                "• Küçük görev → düz fonksiyonlar, tek dosya.\n"
-                "• Orta görev → modüler: her kavram kendi sınıfında, sınıflar interface ile bağlı.\n"
-                "• Büyük görev → katmanlı mimari: presentation / application / domain / infra.\n"
-                "• Dependency injection: sınıflar bağımlılıklarını constructor'dan alsın.\n"
-                "• Event-driven veya functional reactive (gerektiğinde).\n\n"
+                "KALİTE:\n"
+                "• Type hints (Py/TS/Go) zorunlu; mypy strict.\n"
+                "• Guard clause: erken return, derin nesting yok.\n"
+                "• Custom exception hiyerarşisi; DRY; sabitler UPPER_SNAKE_CASE.\n"
+                "• Pure fonksiyon tercih; immutable veri dönüşümü.\n\n"
 
-                "━━━ KOD KALİTESİ STANDARTLARI ━━━\n"
-                "• Type safety zorunlu:\n"
-                "  Python → type hints her parametre/dönüş; mypy strict pass.\n"
-                "  TypeScript → strict: true; any yasak; generic kullan.\n"
-                "  Go → interface tabanlı; error return asla görmezden gelme.\n"
-                "• Defensive programming: her public fonksiyon girdi doğrulamalı;\n"
-                "  guard clause pattern — erken return, derin nesting yok.\n"
-                "• Custom exception hiyerarşisi: BaseError > DomainError > SpecificError.\n"
-                "• DRY — aynı mantık 2+ yerde görünüyorsa abstraction oluştur.\n"
-                "• Magic number yasak — tüm sabitler UPPER_SNAKE_CASE değişkende.\n"
-                "• Pure fonksiyonlar tercih et; yan etki açıkça belgelensin.\n"
-                "• İmmutability: veri dönüşümünde orijinal nesneyi değiştirme; yeni döndür.\n\n"
+                "PERFORMANS: O(n log n) tercih; döngüde I/O yok; object pool/generator.\n\n"
 
-                "━━━ PERFORMANS ━━━\n"
-                "• Önce doğru, sonra hızlı — premature optimization yasak.\n"
-                "• Algoritma seçimi: O(n²) yerine O(n log n) tercih et; complexity yorum sat.\n"
-                "• Bellek: döngü içinde büyük nesne yaratma; object pooling / generator kullan.\n"
-                "• I/O: database çağrısı, ağ isteği döngü içinde olmaz — bulk işle veya async.\n"
-                "• Profiling yeri: bottleneck neresi olabilir, koda yorum sat.\n"
-                "• Caching stratejisi: TTL, LRU, invalidation — hangi katmanda gerekli belirt.\n\n"
+                "GÜVENLİK: Input validation; parameterized SQL; innerHTML yasak;\n"
+                "bcrypt/argon2; secrets .env'de; rate limiting her endpoint'te.\n\n"
 
-                "━━━ GÜVENLİK (Her projede zorunlu) ━━━\n"
-                "• Input validation ve sanitization her dış veri için.\n"
-                "• SQL: parameterized query; ORM kullanıyorsan raw query kullanma.\n"
-                "• XSS: HTML encode; innerHTML yasak — textContent veya DOM API.\n"
-                "• CSRF: state-changing endpoint'lerde token doğrulama.\n"
-                "• Auth: bcrypt/argon2 hash; JWT'de HS256 değil RS256; refresh token rotasyonu.\n"
-                "• Secrets: kaynak kodda asla; .env + vault + CI secret.\n"
-                "• Rate limiting: her public API endpoint'te.\n"
-                "• Dependency: bilinen CVE'li paket versiyonu kullanma — güncel sürüm yaz.\n\n"
+                "TEST: Her public fonksiyon için happy-path + edge + hata case.\n"
+                "Python: pytest parametrize. JS/TS: Jest describe/it.\n\n"
 
-                "━━━ TEST ━━━\n"
-                "• Her public fonksiyon için en az 3 test case yaz:\n"
-                "  happy path, edge case, hata durumu.\n"
-                "• Python: pytest + fixtures + parametrize.\n"
-                "• JS/TS: Jest + describe/it + mock.\n"
-                "• Test isimleri: 'should_return_X_when_Y' formatı.\n"
-                "• Test bloğu kodu takiben gelsin; ayrı dosya referansı ver.\n\n"
+                "ASYNC: asyncio+aiohttp (Py); async/await (JS) — .then() yasak;\n"
+                "timeout + cancellation token her operasyonda.\n\n"
 
-                "━━━ ASYNC & EŞZAMANLILIK ━━━\n"
-                "• Python async: asyncio + aiohttp/httpx; trio gerekiyorsa belirt.\n"
-                "  Sync I/O async context'te asla; run_in_executor ile sarmal.\n"
-                "• JS/TS: async/await zorunlu; .then() zinciri yasak.\n"
-                "  Promise.all paralel; Promise.race timeout pattern.\n"
-                "• Deadlock koruması: timeout + cancellation token her async operasyonda.\n"
-                "• Backpressure: üretici-tüketici hızı farkı için queue/semaphore.\n\n"
+                "LOG: logging/winston; print/console.log production'da yasak;\n"
+                "structured JSON log; PII asla log'a.\n\n"
 
-                "━━━ LOGLAMA & OBSERVABİLİTY ━━━\n"
-                "• Python: logging modülü; print() yasak. Structured log (JSON format).\n"
-                "• JS: console.log() sadece development; prod'da winston/pino.\n"
-                "• Log seviyeleri doğru kullan: DEBUG/INFO/WARN/ERROR/CRITICAL.\n"
-                "• Hassas veri (şifre, token, PII) log'a yazılmaz.\n"
-                "• Trace ID: dağıtık sistemde her isteğe UUID trace id ekle.\n\n"
+                "ÇIKTI: doğru dil etiketi (```python, ```ts...); çok dosya → ayrı blok;\n"
+                "blok üstü '# filename: x.py'; blok sonrası kurulum adımları.\n\n"
 
-                "━━━ DOKÜMANTASYON ━━━\n"
-                "• Python: Google stili docstring (Args/Returns/Raises/Example).\n"
-                "• JS/TS: JSDoc (@param, @returns, @throws, @example).\n"
-                "• README bloğu: kurulum, kullanım, env değişkenleri, test komutu.\n"
-                "• Kompleks algoritmada: 'neden bu yaklaşım' yorumu — ne değil, neden.\n\n"
+                "YASAK: stub/TODO, var/any/bare-except, eval/innerHTML,\n"
+                "hardcoded secret, döngüde sync-I/O, magic number, callback hell.\n\n"
 
-                "━━━ ÇIKTI FORMATI ━━━\n"
-                "• Dil etiketi doğru: ```python ```, ```typescript ```, ```bash ``` vb.\n"
-                "• Çok dosyalı: her dosya ayrı blok; üstünde '# ── filename: x.py ──'.\n"
-                "• Blok öncesi: 1-3 cümle ne yaptığı.\n"
-                "• Blok sonrası: kurulum komutları, ortam gereksinimleri, örnek çalıştırma.\n"
-                "• Kodu ASLA yarım bırakma — son satıra kadar eksiksiz tamamla.\n\n"
-
-                "━━━ MUTLAK YASAKLAR ━━━\n"
-                "✗ 'TODO: implement', '# ...', pass gibi stub/placeholder.\n"
-                "✗ var (JS); any (TS); bare except (Python).\n"
-                "✗ eval(), exec(), innerHTML, dangerouslySetInnerHTML.\n"
-                "✗ Hardcoded credential, secret, token.\n"
-                "✗ Döngü içinde senkron I/O, N+1 sorgu.\n"
-                "✗ Magic number — sabit değilse açıkla.\n"
-                "✗ Debug log production kodunda.\n"
-                "✗ Callback hell — async/await ile düzelt.\n\n"
-
-                f"Yanıt dili: {target_lang}\n"
-                "Hazırım. Ne inşa ediyoruz?"
+                "Kodu ASLA yarım bırakma — son satıra kadar eksiksiz tamamla."
             )
+
             messages = [{"role": "system", "content": hacker_sys}]
-            for m in history[-8:-1]:
-                messages.append({"role": m["role"], "content": _kisalt_gecmis_icerik(m["content"], limit_chars=1200)})
+            # Geçmiş mesajları çok kısa tut — TPM bütçesini kullanıcı mesajına ve
+            # yanıta bırakmak için geçmiş adetini ve karakter limitini kısıyoruz.
+            for m in history[-HACKER_GECMIS_ADET - 1 : -1]:
+                messages.append({
+                    "role": m["role"],
+                    "content": _kisalt_gecmis_icerik(m["content"], limit_chars=HACKER_GECMIS_KISALT),
+                })
             messages.append({"role": "user", "content": prompt})
+
             try:
-                # Hacker modunda max token yüksek tut + özel key kullan
-                res = SazanAIConception._tek_istek(messages, model_cfg, max_tokens=6000, force_search=False, pool=_pool_hacker)
+                res = SazanAIConception._tek_istek(
+                    messages, model_cfg,
+                    max_tokens=HACKER_MAX_TOKENS,
+                    force_search=False,
+                    pool=_pool_hacker,
+                )
                 combined = res.choices[0].message.content or ""
                 finish_reason = res.choices[0].finish_reason
                 attempts = 0
                 while finish_reason == "length" and attempts < MAX_CONTINUATIONS:
                     messages.append({"role": "assistant", "content": combined})
-                    messages.append({"role": "user", "content": "Kaldığın satırdan itibaren devam et, başa dönme."})
-                    res2 = SazanAIConception._tek_istek(messages, model_cfg, max_tokens=6000, pool=_pool_hacker)
+                    messages.append({
+                        "role": "user",
+                        "content": "Kaldığın satırdan itibaren devam et, başa dönme.",
+                    })
+                    res2 = SazanAIConception._tek_istek(
+                        messages, model_cfg,
+                        max_tokens=HACKER_MAX_TOKENS,
+                        pool=_pool_hacker,
+                    )
                     combined += res2.choices[0].message.content or ""
                     finish_reason = res2.choices[0].finish_reason
                     attempts += 1
                 return combined
             except Exception as e:
+                err = str(e)
+                # TPM limiti yine de aşıldıysa daha küçük tokenla son bir kez dene
+                if "413" in err or "rate_limit_exceeded" in err or "too large" in err:
+                    try:
+                        # geçmişi tamamen çıkar, sadece sys + user
+                        msgs_minimal = [
+                            {"role": "system", "content": hacker_sys},
+                            {"role": "user", "content": prompt},
+                        ]
+                        res_min = SazanAIConception._tek_istek(
+                            msgs_minimal, model_cfg,
+                            max_tokens=1500,
+                            force_search=False,
+                            pool=_pool_hacker,
+                        )
+                        return res_min.choices[0].message.content or ""
+                    except Exception as e2:
+                        return (
+                            f"⚠️ Hacker Mod: İstek hâlâ çok büyük ({e2}). "
+                            "Lütfen soruyu daha kısa yaz veya yeni sohbet aç."
+                        )
                 return f"⚠️ Hacker Mod hatası: {e}"
         # ── NORMAL MOD DEVAM ─────────────────────────────────────────
 
