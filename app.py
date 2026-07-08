@@ -1314,10 +1314,8 @@ init_session_state()
 # ---------- "BU CİHAZDA BENİ HATIRLA" — OTOMATİK GİRİŞ DENEMESİ ----------
 # Bu blok, kullanıcı henüz giriş yapmamışsa/misafir modunda değilse ve daha önce
 # "beni hatırla" işaretlediyse, tarayıcıdaki çerezleri okuyup otomatik giriş yapar.
-# CookieManager ilk render'da henüz hazır olmayabilir; bu yüzden:
-#  • İlk render'da (auto_login_checked=False) cookie okumayı deneriz.
-#  • Cookie None gelirse bileşen henüz yüklenmemiş demektir — bir rerun daha bekleriz.
-#  • İkinci render'da (auto_login_checked=True) zaten giriş yapılmış ya da formda devam edilir.
+# CookieManager ilk render'da hazır olmayabilir; bu yüzden auto_login_checked=False
+# olduğunda okuma deneriz. Eğer kütüphane yoksa (NoOp) doğrudan geçeriz.
 if (not st.session_state.username) and (not st.session_state.guest_active) and (not st.session_state.auto_login_checked):
     try:
         remembered_email = cookie_manager.get(REMEMBER_EMAIL_COOKIE)
@@ -1325,11 +1323,8 @@ if (not st.session_state.username) and (not st.session_state.guest_active) and (
     except Exception:
         remembered_email, remembered_token = None, None
 
-    # Cookie henüz yüklenmediyse (None ve kütüphane var) — bir rerun ile bekle
-    if remembered_email is None and _COOKIE_LIB_VAR:
-        # Bileşen henüz DOM'a işlenmedi; bir rerun tetikle, flag'i hâlâ False bırak
-        st.rerun()
-
+    # Sadece gerçekten bir email değeri varsa işlem yap; None ise kütüphane hazır
+    # olmamış olabilir ama sonsuz döngüye GİRMEMEK için flag'i True yapıp geçiyoruz.
     st.session_state.auto_login_checked = True
 
     if remembered_email and remembered_token and SazanAuth.verify_remember_token(remembered_email, remembered_token):
